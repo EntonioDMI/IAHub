@@ -76,44 +76,12 @@ return function(Fluent, Tab)
         end
     end
     
-    -- UI Elements
-    local Toggle = Tab:AddToggle("Enabled", {
-        Title = "Enable ESP",
-        Default = false
-    })
-    
-    local TeamCheck = Tab:AddToggle("TeamCheck", {
-        Title = "Team Check",
-        Description = "Don't highlight teammates",
-        Default = true
-    })
-    
-    local AutoTeamColor = Tab:AddToggle("AutoTeamColor", {
-        Title = "Auto Team Color",
-        Description = "Use team colors for highlights",
-        Default = true
-    })
-    
-    local ColorPicker = Tab:AddColorpicker("HighlightColor", {
-        Title = "Highlight Color",
-        Default = Color3.fromRGB(255, 0, 0)
-    })
-    
-    local TransparencySlider = Tab:AddSlider("HighlightTransparency", {
-        Title = "Highlight Transparency",
-        Description = "Adjust highlight transparency",
-        Default = 0.5,
-        Min = 0,
-        Max = 1,
-        Rounding = 2
-    })
-    
     -- Connections
-    Toggle:OnChanged(updateHighlights)
-    TeamCheck:OnChanged(updateHighlights)
-    AutoTeamColor:OnChanged(updateHighlights)
-    ColorPicker:OnChanged(updateHighlights)
-    TransparencySlider:OnChanged(updateHighlights)
+    Options.Enabled:OnChanged(updateHighlights)
+    Options.TeamCheck:OnChanged(updateHighlights)
+    Options.AutoTeamColor:OnChanged(updateHighlights)
+    Options.HighlightColor:OnChanged(updateHighlights)
+    Options.HighlightTransparency:OnChanged(updateHighlights)
     
     Players.PlayerAdded:Connect(function(player)
         if Options.Enabled.Value then

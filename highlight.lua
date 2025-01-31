@@ -7,10 +7,15 @@ return function(Fluent, Tab)
     
     -- Variables
     local highlights = {}
+    local defaultColor = Color3.fromRGB(150, 150, 150) -- Серый цвет по умолчанию
     
     -- Functions
     local function getTeamColor(player)
-        return player.Team and player.Team.TeamColor.Color or Color3.new(1, 0, 0)
+        -- Если у игрока есть команда и цвет команды
+        if player.Team and player.Team.TeamColor then
+            return player.Team.TeamColor.Color
+        end
+        return defaultColor -- Возвращаем серый цвет, если нет команды или цвета команды
     end
     
     local function isTeamMate(player)

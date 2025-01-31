@@ -19,7 +19,11 @@ return function(Fluent, Tab)
     end
     
     local function isTeamMate(player)
-        if not LocalPlayer.Team then return false end
+        -- Если у локального игрока нет команды, проверяем есть ли команда у другого игрока
+        if not LocalPlayer.Team then
+            return player.Team == nil -- Если у обоих нет команды, значит они в одной команде
+        end
+        -- Если у обоих есть команда, сравниваем их
         return player.Team == LocalPlayer.Team
     end
     

@@ -38,11 +38,19 @@ return function(Fluent, Tab)
         highlight.OutlineTransparency = _G.highlightSettings.outlineTransparency
     end
     
+    local function removeHighlight(player)
+        if highlights[player] then
+            highlights[player]:Destroy()
+            highlights[player] = nil
+        end
+    end
+    
     local function createHighlight(player)
         if player == LocalPlayer then return end
         
         -- Check if we should create highlight based on team settings
         if _G.highlightSettings.teamCheck and isTeamMate(player) then
+            removeHighlight(player)
             return
         end
         
@@ -71,14 +79,8 @@ return function(Fluent, Tab)
         end)
     end
     
-    local function removeHighlight(player)
-        if highlights[player] then
-            highlights[player]:Destroy()
-            highlights[player] = nil
-        end
-    end
-    
-    local function updateHighlights()
+    -- Make updateHighlights function global so it can be called from UI callbacks
+    _G.updateHighlights = function()
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
                 if _G.highlightSettings.enabled then
@@ -98,24 +100,6 @@ return function(Fluent, Tab)
         end
     end
     
-    -- Watch for changes in the highlight settings
-    local function watchSetting(name)
-        spawn(function()
-            local lastValue = _G.highlightSettings[name]
-            while wait(0.1) do
-                if _G.highlightSettings[name] ~= lastValue then
-                    lastValue = _G.highlightSettings[name]
-                    updateHighlights()
-                end
-            end
-        end)
-    end
-    
-    -- Watch all settings
-    for setting, _ in pairs(_G.highlightSettings) do
-        watchSetting(setting)
-    end
-    
     -- Connections for player events
     Players.PlayerAdded:Connect(function(player)
         if _G.highlightSettings.enabled then
@@ -128,7 +112,7 @@ return function(Fluent, Tab)
     end)
     
     -- Monitor LocalPlayer team changes
-    LocalPlayer:GetPropertyChangedSignal("Team"):Connect(updateHighlights)
+    LocalPlayer:GetPropertyChangedSignal("Team"):Connect(_G.updateHighlights)
     
     -- Initial setup
     for _, player in ipairs(Players:GetPlayers()) do

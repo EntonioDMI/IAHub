@@ -18,18 +18,22 @@ return function(Fluent, Tab)
         return player.Team == LocalPlayer.Team
     end
     
+    local function updateHighlightColors(highlight, player)
+        if Options.AutoTeamColor.Value then
+            highlight.FillColor = getTeamColor(player)
+        else
+            highlight.FillColor = Options.FillColor.Value
+        end
+        highlight.OutlineColor = Options.OutlineColor.Value
+        highlight.FillTransparency = Options.FillTransparency.Value
+        highlight.OutlineTransparency = Options.OutlineTransparency.Value
+    end
+    
     local function createHighlight(player)
         if player == LocalPlayer then return end
         
         local highlight = Instance.new("Highlight")
-        highlight.FillTransparency = Options.HighlightTransparency.Value
-        highlight.OutlineTransparency = 1
-        
-        if Options.AutoTeamColor.Value then
-            highlight.FillColor = getTeamColor(player)
-        else
-            highlight.FillColor = Options.HighlightColor.Value
-        end
+        updateHighlightColors(highlight, player)
         
         if player.Character then
             highlight.Parent = player.Character
@@ -39,6 +43,14 @@ return function(Fluent, Tab)
         player.CharacterAdded:Connect(function(character)
             highlight.Parent = character
             highlights[player] = highlight
+            updateHighlightColors(highlight, player)
+        end)
+        
+        -- Update colors when team changes
+        player:GetPropertyChangedSignal("Team"):Connect(function()
+            if highlights[player] then
+                updateHighlightColors(highlights[player], player)
+            end
         end)
     end
     
@@ -59,14 +71,7 @@ return function(Fluent, Tab)
                         if not highlights[player] then
                             createHighlight(player)
                         else
-                            -- Update existing highlight
-                            local highlight = highlights[player]
-                            highlight.FillTransparency = Options.HighlightTransparency.Value
-                            if Options.AutoTeamColor.Value then
-                                highlight.FillColor = getTeamColor(player)
-                            else
-                                highlight.FillColor = Options.HighlightColor.Value
-                            end
+                            updateHighlightColors(highlights[player], player)
                         end
                     end
                 else
@@ -76,18 +81,19 @@ return function(Fluent, Tab)
         end
     end
     
-    -- Connections
+    -- Connections for UI changes
     Options.Enabled:OnChanged(updateHighlights)
     Options.TeamCheck:OnChanged(updateHighlights)
     Options.AutoTeamColor:OnChanged(updateHighlights)
-    Options.HighlightColor:OnChanged(updateHighlights)
-    Options.HighlightTransparency:OnChanged(updateHighlights)
+    Options.FillColor:OnChanged(updateHighlights)
+    Options.OutlineColor:OnChanged(updateHighlights)
+    Options.FillTransparency:OnChanged(updateHighlights)
+    Options.OutlineTransparency:OnChanged(updateHighlights)
     
+    -- Connections for player events
     Players.PlayerAdded:Connect(function(player)
-        if Options.Enabled.Value then
-            if not (Options.TeamCheck.Value and isTeamMate(player)) then
-                createHighlight(player)
-            end
+        if Options.Enabled.Value and not (Options.TeamCheck.Value and isTeamMate(player)) then
+            createHighlight(player)
         end
     end)
     
@@ -95,12 +101,13 @@ return function(Fluent, Tab)
         removeHighlight(player)
     end)
     
+    -- Monitor LocalPlayer team changes
+    LocalPlayer:GetPropertyChangedSignal("Team"):Connect(updateHighlights)
+    
     -- Initial setup
     for _, player in ipairs(Players:GetPlayers()) do
-        if Options.Enabled.Value then
-            if not (Options.TeamCheck.Value and isTeamMate(player)) then
-                createHighlight(player)
-            end
+        if Options.Enabled.Value and not (Options.TeamCheck.Value and isTeamMate(player)) then
+            createHighlight(player)
         end
     end
 end

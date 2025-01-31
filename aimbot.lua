@@ -1,245 +1,133 @@
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
-local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
-
--- Load modules
-local AimbotModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/EntonioDMI/IAHub/refs/heads/main/aimbot.lua"))()
-local HighlightModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/EntonioDMI/IAHub/refs/heads/main/highlight.lua"))()
-local MiscModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/EntonioDMI/IAHub/refs/heads/main/misc.lua"))()
-
-local Window = Fluent:CreateWindow({
-    Title = "IAHub",
-    SubTitle = "v1.0 Alpha by EntonioDMI",
-    TabWidth = 160,
-    Size = UDim2.fromOffset(580, 460),
-    Acrylic = true,
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl
-})
-
-local Tabs = {
-    Aimbot = Window:AddTab({ Title = "Aimbot", Icon = "target" }),
-    Highlight = Window:AddTab({ Title = "Highlight", Icon = "eye" }),
-    Misc = Window:AddTab({ Title = "Misc", Icon = "settings-2" }),
-    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
-}
-
--- Make settings global first before creating UI elements
-_G.highlightSettings = {
-    enabled = false,
-    teamCheck = true,
-    autoTeamColor = true,
-    fillColor = Color3.fromRGB(255, 0, 0),
-    fillTransparency = 0.5,
-    outlineColor = Color3.fromRGB(255, 255, 255),
-    outlineTransparency = 0
-}
-
--- Initialize highlight module first to set up the update function
-HighlightModule(Fluent, Tabs.Highlight)
-
--- Aimbot Tab Elements
-local Toggle = Tabs.Aimbot:AddToggle("Enabled", {
-    Title = "Enable Aimbot",
-    Default = _G.aimbotSettings.enabled,
-    Callback = function(value)
-        _G.aimbotSettings.enabled = value
-        if not value then
+return function(Fluent, Tab)
+    -- Services
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local UserInputService = game:GetService("UserInputService")
+    local LocalPlayer = Players.LocalPlayer
+    local Camera = workspace.CurrentCamera
+    
+    -- Variables
+    local DrawingLib = Drawing.new
+    local FOVCircle = DrawingLib("Circle")
+    FOVCircle.Thickness = 1
+    FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+    FOVCircle.Filled = false
+    FOVCircle.Transparency = 1
+    FOVCircle.Visible = false
+    
+    -- Settings
+    _G.aimbotSettings = {
+        enabled = false,
+        teamCheck = true,
+        fov = 100,
+        drawFOV = true,
+        triggerKey = Enum.UserInputType.MouseButton2,
+        lockPart = "Head",
+        wallCheck = true,
+        aliveCheck = true,
+        sensitivity = 1
+    }
+    
+    -- Functions
+    local function isTeamMate(player)
+        if not LocalPlayer.Team then
+            return player.Team == nil
+        end
+        return player.Team == LocalPlayer.Team
+    end
+    
+    local function isAlive(character)
+        if not character then return false end
+        local humanoid = character:FindFirstChild("Humanoid")
+        return humanoid and humanoid.Health > 0
+    end
+    
+    local function getLockPart(character)
+        if not character then return nil end
+        
+        if _G.aimbotSettings.lockPart == "Head" then
+            return character:FindFirstChild("Head")
+        else
+            -- Check for R15
+            local upperTorso = character:FindFirstChild("UpperTorso")
+            if upperTorso then
+                return upperTorso
+            end
+            -- Check for R6
+            return character:FindFirstChild("Torso")
+        end
+    end
+    
+    local function isVisible(part)
+        if not _G.aimbotSettings.wallCheck then return true end
+        
+        local origin = Camera.CFrame.Position
+        local direction = (part.Position - origin).Unit
+        local rayParams = RaycastParams.new()
+        rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+        rayParams.FilterDescendantsInstances = {LocalPlayer.Character, part.Parent}
+        
+        local result = workspace:Raycast(origin, direction * 1000, rayParams)
+        return not result
+    end
+    
+    local function getClosestPlayerInFOV()
+        local closest = nil
+        local maxDistance = _G.aimbotSettings.fov
+        local mousePos = UserInputService:GetMouseLocation()
+        
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player == LocalPlayer then continue end
+            if _G.aimbotSettings.teamCheck and isTeamMate(player) then continue end
+            
+            local character = player.Character
+            if not character then continue end
+            if _G.aimbotSettings.aliveCheck and not isAlive(character) then continue end
+            
+            local part = getLockPart(character)
+            if not part then continue end
+            if not isVisible(part) then continue end
+            
+            local partPos, onScreen = Camera:WorldToViewportPoint(part.Position)
+            if not onScreen then continue end
+            
+            local distance = (Vector2.new(mousePos.X, mousePos.Y) - Vector2.new(partPos.X, partPos.Y)).Magnitude
+            if distance <= maxDistance then
+                maxDistance = distance
+                closest = part
+            end
+        end
+        
+        return closest
+    end
+    
+    local function updateFOVCircle()
+        if not _G.aimbotSettings.drawFOV then
             FOVCircle.Visible = false
+            return
         end
+        
+        local mousePos = UserInputService:GetMouseLocation()
+        FOVCircle.Position = mousePos
+        FOVCircle.Radius = _G.aimbotSettings.fov
+        FOVCircle.Visible = true
     end
-})
-
-local TeamCheck = Tabs.Aimbot:AddToggle("TeamCheck", {
-    Title = "Team Check",
-    Description = "Don't target teammates",
-    Default = _G.aimbotSettings.teamCheck,
-    Callback = function(value)
-        _G.aimbotSettings.teamCheck = value
-    end
-})
-
-local FOVSlider = Tabs.Aimbot:AddSlider("FOV", {
-    Title = "FOV",
-    Description = "Field of View radius",
-    Default = _G.aimbotSettings.fov,
-    Min = 10,
-    Max = 800,
-    Rounding = 0,
-    Callback = function(value)
-        _G.aimbotSettings.fov = value
-    end
-})
-
-local DrawFOV = Tabs.Aimbot:AddToggle("DrawFOV", {
-    Title = "Draw FOV",
-    Description = "Show FOV circle",
-    Default = _G.aimbotSettings.drawFOV,
-    Callback = function(value)
-        _G.aimbotSettings.drawFOV = value
-        if not value then
-            FOVCircle.Visible = false
-        end
-    end
-})
-
-local TriggerKeyDropdown = Tabs.Aimbot:AddDropdown("TriggerKey", {
-    Title = "Trigger Key",
-    Description = "Key to activate aimbot",
-    Values = {"Mouse1", "Mouse2", "Mouse3", "Mouse4", "Mouse5"},
-    Default = "Mouse2",
-    Multi = false,
-    Callback = function(value)
-        local keyMap = {
-            Mouse1 = Enum.UserInputType.MouseButton1,
-            Mouse2 = Enum.UserInputType.MouseButton2,
-            Mouse3 = Enum.UserInputType.MouseButton3,
-            Mouse4 = Enum.UserInputType.MouseButton4,
-            Mouse5 = Enum.UserInputType.MouseButton5
-        }
-        _G.aimbotSettings.triggerKey = keyMap[value]
-    end
-})
-
-local LockPartDropdown = Tabs.Aimbot:AddDropdown("LockPart", {
-    Title = "Lock Part",
-    Description = "Body part to target",
-    Values = {"Head", "Torso"},
-    Default = "Head",
-    Multi = false,
-    Callback = function(value)
-        _G.aimbotSettings.lockPart = value
-    end
-})
-
-local WallCheck = Tabs.Aimbot:AddToggle("WallCheck", {
-    Title = "Wall Check",
-    Description = "Check if target is behind walls",
-    Default = _G.aimbotSettings.wallCheck,
-    Callback = function(value)
-        _G.aimbotSettings.wallCheck = value
-    end
-})
-
-local AliveCheck = Tabs.Aimbot:AddToggle("AliveCheck", {
-    Title = "Alive Check",
-    Description = "Only target alive players",
-    Default = _G.aimbotSettings.aliveCheck,
-    Callback = function(value)
-        _G.aimbotSettings.aliveCheck = value
-    end
-})
-
-local SensitivitySlider = Tabs.Aimbot:AddSlider("Sensitivity", {
-    Title = "Sensitivity",
-    Description = "Aiming speed",
-    Default = _G.aimbotSettings.sensitivity,
-    Min = 0.1,
-    Max = 2,
-    Rounding = 2,
-    Callback = function(value)
-        _G.aimbotSettings.sensitivity = value
-    end
-})
-
--- Highlight Tab Elements
-local Toggle = Tabs.Highlight:AddToggle("Enabled", {
-    Title = "Enable ESP",
-    Default = _G.highlightSettings.enabled,
-    Callback = function(value)
-        _G.highlightSettings.enabled = value
-    end
-})
-
-local TeamCheck = Tabs.Highlight:AddToggle("TeamCheck", {
-    Title = "Team Check",
-    Description = "Don't highlight teammates",
-    Default = _G.highlightSettings.teamCheck,
-    Callback = function(value)
-        _G.highlightSettings.teamCheck = value
-        if _G.updateHighlights then
-            _G.updateHighlights()
-        end
-    end
-})
-
-local AutoTeamColor = Tabs.Highlight:AddToggle("AutoTeamColor", {
-    Title = "Auto Team Color",
-    Description = "Use team colors for highlights",
-    Default = _G.highlightSettings.autoTeamColor,
-    Callback = function(value)
-        _G.highlightSettings.autoTeamColor = value
-        if _G.updateHighlights then
-            _G.updateHighlights()
-        end
-    end
-})
-
--- Fill Color Settings
-local FillColorPicker = Tabs.Highlight:AddColorpicker("FillColor", {
-    Title = "Fill Color",
-    Description = "Color for the highlight fill",
-    Default = _G.highlightSettings.fillColor,
-    Callback = function(value)
-        _G.highlightSettings.fillColor = value
-    end
-})
-
-local FillTransparencySlider = Tabs.Highlight:AddSlider("FillTransparency", {
-    Title = "Fill Transparency",
-    Description = "Adjust fill transparency",
-    Default = _G.highlightSettings.fillTransparency,
-    Min = 0,
-    Max = 1,
-    Rounding = 2,
-    Callback = function(value)
-        _G.highlightSettings.fillTransparency = value
-    end
-})
-
--- Outline Color Settings
-local OutlineColorPicker = Tabs.Highlight:AddColorpicker("OutlineColor", {
-    Title = "Outline Color",
-    Description = "Color for the highlight outline",
-    Default = _G.highlightSettings.outlineColor,
-    Callback = function(value)
-        _G.highlightSettings.outlineColor = value
-    end
-})
-
-local OutlineTransparencySlider = Tabs.Highlight:AddSlider("OutlineTransparency", {
-    Title = "Outline Transparency",
-    Description = "Adjust outline transparency",
-    Default = _G.highlightSettings.outlineTransparency,
-    Min = 0,
-    Max = 1,
-    Rounding = 2,
-    Callback = function(value)
-        _G.highlightSettings.outlineTransparency = value
-    end
-})
-
--- Initialize other modules
-AimbotModule(Fluent, Tabs.Aimbot)
-MiscModule(Fluent, Tabs.Misc)
-
--- Settings Tab Configuration
-SaveManager:SetLibrary(Fluent)
-InterfaceManager:SetLibrary(Fluent)
-SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({})
-InterfaceManager:SetFolder("IAHubConfig")
-SaveManager:SetFolder("IAHubConfig/GameSpecific")
-
-InterfaceManager:BuildInterfaceSection(Tabs.Settings)
-SaveManager:BuildConfigSection(Tabs.Settings)
-
-Window:SelectTab(1)
-
-Fluent:Notify({
-    Title = "IAHub Loaded",
-    Content = "v1.0 Alpha by EntonioDMI",
-    Duration = 5
-})
-
-SaveManager:LoadAutoloadConfig()
+    
+    -- Main aimbot loop
+    RunService.RenderStepped:Connect(function()
+        updateFOVCircle()
+        
+        if not _G.aimbotSettings.enabled then return end
+        if not UserInputService:IsMouseButtonPressed(_G.aimbotSettings.triggerKey) then return end
+        
+        local target = getClosestPlayerInFOV()
+        if not target then return end
+        
+        local targetPos = target.Position
+        local cameraPos = Camera.CFrame.Position
+        local newCFrame = CFrame.new(cameraPos, targetPos)
+        
+        -- Smooth aim using sensitivity
+        Camera.CFrame = Camera.CFrame:Lerp(newCFrame, _G.aimbotSettings.sensitivity)
+    end)
+end

@@ -32,6 +32,11 @@ return function(Fluent, Tab)
     local function createHighlight(player)
         if player == LocalPlayer then return end
         
+        -- Check if we should create highlight based on team settings
+        if _G.highlightSettings.teamCheck and isTeamMate(player) then
+            return
+        end
+        
         local highlight = Instance.new("Highlight")
         updateHighlightColors(highlight, player)
         
@@ -48,7 +53,11 @@ return function(Fluent, Tab)
         
         player:GetPropertyChangedSignal("Team"):Connect(function()
             if highlights[player] then
-                updateHighlightColors(highlights[player], player)
+                if _G.highlightSettings.teamCheck and isTeamMate(player) then
+                    removeHighlight(player)
+                else
+                    updateHighlightColors(highlights[player], player)
+                end
             end
         end)
     end
@@ -80,17 +89,6 @@ return function(Fluent, Tab)
         end
     end
     
-    -- Make settings global so they can be accessed from the highlight module
-    _G.highlightSettings = _G.highlightSettings or {
-        enabled = false,
-        teamCheck = true,
-        autoTeamColor = true,
-        fillColor = Color3.fromRGB(255, 0, 0),
-        fillTransparency = 0.5,
-        outlineColor = Color3.fromRGB(255, 255, 255),
-        outlineTransparency = 0
-    }
-    
     -- Watch for changes in the highlight settings
     local function watchSetting(name)
         spawn(function()
@@ -111,7 +109,7 @@ return function(Fluent, Tab)
     
     -- Connections for player events
     Players.PlayerAdded:Connect(function(player)
-        if _G.highlightSettings.enabled and not (_G.highlightSettings.teamCheck and isTeamMate(player)) then
+        if _G.highlightSettings.enabled then
             createHighlight(player)
         end
     end)
@@ -125,7 +123,7 @@ return function(Fluent, Tab)
     
     -- Initial setup
     for _, player in ipairs(Players:GetPlayers()) do
-        if _G.highlightSettings.enabled and not (_G.highlightSettings.teamCheck and isTeamMate(player)) then
+        if _G.highlightSettings.enabled then
             createHighlight(player)
         end
     end

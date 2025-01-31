@@ -19,14 +19,14 @@ return function(Fluent, Tab)
     end
     
     local function updateHighlightColors(highlight, player)
-        if Options.AutoTeamColor.Value then
+        if _G.highlightSettings.autoTeamColor then
             highlight.FillColor = getTeamColor(player)
         else
-            highlight.FillColor = Options.FillColor.Value
+            highlight.FillColor = _G.highlightSettings.fillColor
         end
-        highlight.OutlineColor = Options.OutlineColor.Value
-        highlight.FillTransparency = Options.FillTransparency.Value
-        highlight.OutlineTransparency = Options.OutlineTransparency.Value
+        highlight.OutlineColor = _G.highlightSettings.outlineColor
+        highlight.FillTransparency = _G.highlightSettings.fillTransparency
+        highlight.OutlineTransparency = _G.highlightSettings.outlineTransparency
     end
     
     local function createHighlight(player)
@@ -46,7 +46,6 @@ return function(Fluent, Tab)
             updateHighlightColors(highlight, player)
         end)
         
-        -- Update colors when team changes
         player:GetPropertyChangedSignal("Team"):Connect(function()
             if highlights[player] then
                 updateHighlightColors(highlights[player], player)
@@ -64,8 +63,8 @@ return function(Fluent, Tab)
     local function updateHighlights()
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
-                if Options.Enabled.Value then
-                    if Options.TeamCheck.Value and isTeamMate(player) then
+                if _G.highlightSettings.enabled then
+                    if _G.highlightSettings.teamCheck and isTeamMate(player) then
                         removeHighlight(player)
                     else
                         if not highlights[player] then
@@ -81,18 +80,38 @@ return function(Fluent, Tab)
         end
     end
     
-    -- Connections for UI changes
-    Options.Enabled:OnChanged(updateHighlights)
-    Options.TeamCheck:OnChanged(updateHighlights)
-    Options.AutoTeamColor:OnChanged(updateHighlights)
-    Options.FillColor:OnChanged(updateHighlights)
-    Options.OutlineColor:OnChanged(updateHighlights)
-    Options.FillTransparency:OnChanged(updateHighlights)
-    Options.OutlineTransparency:OnChanged(updateHighlights)
+    -- Make settings global so they can be accessed from the highlight module
+    _G.highlightSettings = _G.highlightSettings or {
+        enabled = false,
+        teamCheck = true,
+        autoTeamColor = true,
+        fillColor = Color3.fromRGB(255, 0, 0),
+        fillTransparency = 0.5,
+        outlineColor = Color3.fromRGB(255, 255, 255),
+        outlineTransparency = 0
+    }
+    
+    -- Watch for changes in the highlight settings
+    local function watchSetting(name)
+        spawn(function()
+            local lastValue = _G.highlightSettings[name]
+            while wait(0.1) do
+                if _G.highlightSettings[name] ~= lastValue then
+                    lastValue = _G.highlightSettings[name]
+                    updateHighlights()
+                end
+            end
+        end)
+    end
+    
+    -- Watch all settings
+    for setting, _ in pairs(_G.highlightSettings) do
+        watchSetting(setting)
+    end
     
     -- Connections for player events
     Players.PlayerAdded:Connect(function(player)
-        if Options.Enabled.Value and not (Options.TeamCheck.Value and isTeamMate(player)) then
+        if _G.highlightSettings.enabled and not (_G.highlightSettings.teamCheck and isTeamMate(player)) then
             createHighlight(player)
         end
     end)
@@ -106,7 +125,7 @@ return function(Fluent, Tab)
     
     -- Initial setup
     for _, player in ipairs(Players:GetPlayers()) do
-        if Options.Enabled.Value and not (Options.TeamCheck.Value and isTeamMate(player)) then
+        if _G.highlightSettings.enabled and not (_G.highlightSettings.teamCheck and isTeamMate(player)) then
             createHighlight(player)
         end
     end

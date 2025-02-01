@@ -11,7 +11,7 @@ return function(Fluent, Tab)
             originalProps[part] = {
                 Size = part.Size,
                 Transparency = part.Transparency,
-                BrickColor = part.BrickColor,
+                Color = part.Color,
                 Material = part.Material,
                 CanCollide = part.CanCollide
             }
@@ -36,7 +36,7 @@ return function(Fluent, Tab)
         local props = originalProps[part]
         part.Size = props.Size
         part.Transparency = props.Transparency
-        part.BrickColor = props.BrickColor
+        part.Color = props.Color
         part.Material = props.Material
         part.CanCollide = props.CanCollide
         
@@ -92,9 +92,9 @@ return function(Fluent, Tab)
         
         -- Apply common properties
         part.Transparency = _G.hitboxSettings.transparency
-        part.BrickColor = BrickColor.new("Really blue")
-        part.Material = "ForceField" -- Changed from Neon to ForceField for better visibility
-        part.CanCollide = false
+        part.Color = _G.hitboxSettings.color
+        part.Material = Enum.Material.ForceField
+        part.CanCollide = false -- Always disable collision to prevent players from getting stuck
     end
 
     local function updateHitboxes()

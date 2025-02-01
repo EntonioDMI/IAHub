@@ -55,34 +55,34 @@ return function(Modules)
 
     do
         -- Aimbot Tab
-        local Toggle = Tabs.Aimbot:AddToggle("AimbotEnabled", {
+        local AimbotEnabledToggle = Tabs.Aimbot:AddToggle("AimbotEnabled", {
             Title = "Enabled",
             Default = false
         })
 
-        Toggle:OnChanged(function()
+        AimbotEnabledToggle:OnChanged(function()
             _G.aimbotSettings.enabled = Options.AimbotEnabled.Value
         end)
 
-        local TeamToggle = Tabs.Aimbot:AddToggle("TeamCheck", {
+        local AimbotTeamToggle = Tabs.Aimbot:AddToggle("TeamCheck", {
             Title = "Team Check",
             Default = false
         })
 
-        TeamToggle:OnChanged(function()
+        AimbotTeamToggle:OnChanged(function()
             _G.aimbotSettings.teamCheck = Options.TeamCheck.Value
         end)
 
-        local FOVToggle = Tabs.Aimbot:AddToggle("ShowFOV", {
+        local AimbotFOVToggle = Tabs.Aimbot:AddToggle("ShowFOV", {
             Title = "Show FOV",
             Default = false
         })
 
-        FOVToggle:OnChanged(function()
+        AimbotFOVToggle:OnChanged(function()
             _G.aimbotSettings.drawFOV = Options.ShowFOV.Value
         end)
 
-        local FOVSlider = Tabs.Aimbot:AddSlider("FOV", {
+        local AimbotFOVSlider = Tabs.Aimbot:AddSlider("FOV", {
             Title = "FOV",
             Description = "Field of View radius",
             Default = 100,
@@ -91,11 +91,11 @@ return function(Modules)
             Rounding = 0
         })
 
-        FOVSlider:OnChanged(function()
+        AimbotFOVSlider:OnChanged(function()
             _G.aimbotSettings.fov = Options.FOV.Value
         end)
 
-        local SensitivitySlider = Tabs.Aimbot:AddSlider("Sensitivity", {
+        local AimbotSensitivitySlider = Tabs.Aimbot:AddSlider("Sensitivity", {
             Title = "Sensitivity",
             Description = "Aim smoothness",
             Default = 1,
@@ -104,61 +104,61 @@ return function(Modules)
             Rounding = 2
         })
 
-        SensitivitySlider:OnChanged(function()
+        AimbotSensitivitySlider:OnChanged(function()
             _G.aimbotSettings.sensitivity = Options.Sensitivity.Value
         end)
 
-        local TargetPartDropdown = Tabs.Aimbot:AddDropdown("TargetPart", {
+        local AimbotTargetPartDropdown = Tabs.Aimbot:AddDropdown("TargetPart", {
             Title = "Target Part",
             Values = {"Head", "Torso"},
             Default = "Head",
             Multi = false
         })
 
-        TargetPartDropdown:OnChanged(function()
+        AimbotTargetPartDropdown:OnChanged(function()
             _G.aimbotSettings.lockPart = Options.TargetPart.Value
         end)
 
-        local WallCheckToggle = Tabs.Aimbot:AddToggle("WallCheck", {
+        local AimbotWallCheckToggle = Tabs.Aimbot:AddToggle("WallCheck", {
             Title = "Wall Check",
             Default = false
         })
 
-        WallCheckToggle:OnChanged(function()
+        AimbotWallCheckToggle:OnChanged(function()
             _G.aimbotSettings.wallCheck = Options.WallCheck.Value
         end)
 
-        local AliveCheckToggle = Tabs.Aimbot:AddToggle("AliveCheck", {
+        local AimbotAliveCheckToggle = Tabs.Aimbot:AddToggle("AliveCheck", {
             Title = "Alive Check",
             Default = false
         })
 
-        AliveCheckToggle:OnChanged(function()
+        AimbotAliveCheckToggle:OnChanged(function()
             _G.aimbotSettings.aliveCheck = Options.AliveCheck.Value
         end)
 
         -- Hitboxes Tab
-        local Toggle = Tabs.Hitboxes:AddToggle("HitboxEnabled", {
+        local HitboxEnabledToggle = Tabs.Hitboxes:AddToggle("HitboxEnabled", {
             Title = "Enabled",
             Default = false
         })
 
-        Toggle:OnChanged(function()
+        HitboxEnabledToggle:OnChanged(function()
             _G.hitboxSettings.enabled = Options.HitboxEnabled.Value
         end)
 
-        local TargetPartDropdown = Tabs.Hitboxes:AddDropdown("HitboxPart", {
+        local HitboxTargetPartDropdown = Tabs.Hitboxes:AddDropdown("HitboxPart", {
             Title = "Target Part",
             Values = {"Head", "Torso"},
             Default = "Head",
             Multi = false
         })
 
-        TargetPartDropdown:OnChanged(function()
+        HitboxTargetPartDropdown:OnChanged(function()
             _G.hitboxSettings.targetPart = Options.HitboxPart.Value
         end)
 
-        local SizeSlider = Tabs.Hitboxes:AddSlider("HitboxSize", {
+        local HitboxSizeSlider = Tabs.Hitboxes:AddSlider("HitboxSize", {
             Title = "Hitbox Size",
             Description = "Size multiplier",
             Default = 8,
@@ -167,11 +167,11 @@ return function(Modules)
             Rounding = 1
         })
 
-        SizeSlider:OnChanged(function()
+        HitboxSizeSlider:OnChanged(function()
             _G.hitboxSettings.size = Options.HitboxSize.Value
         end)
 
-        local TransparencySlider = Tabs.Hitboxes:AddSlider("HitboxTransparency", {
+        local HitboxTransparencySlider = Tabs.Hitboxes:AddSlider("HitboxTransparency", {
             Title = "Transparency",
             Description = "Hitbox transparency",
             Default = 0.7,
@@ -180,52 +180,52 @@ return function(Modules)
             Rounding = 2
         })
 
-        TransparencySlider:OnChanged(function()
+        HitboxTransparencySlider:OnChanged(function()
             _G.hitboxSettings.transparency = Options.HitboxTransparency.Value
         end)
 
         -- Highlight Tab
-        local Toggle = Tabs.Highlight:AddToggle("HighlightEnabled", {
+        local HighlightEnabledToggle = Tabs.Highlight:AddToggle("HighlightEnabled", {
             Title = "Enabled",
             Default = false
         })
 
-        Toggle:OnChanged(function()
+        HighlightEnabledToggle:OnChanged(function()
             _G.highlightSettings.enabled = Options.HighlightEnabled.Value
             _G.updateHighlights()
         end)
 
-        local TeamToggle = Tabs.Highlight:AddToggle("HighlightTeamCheck", {
+        local HighlightTeamToggle = Tabs.Highlight:AddToggle("HighlightTeamCheck", {
             Title = "Team Check",
             Default = false
         })
 
-        TeamToggle:OnChanged(function()
+        HighlightTeamToggle:OnChanged(function()
             _G.highlightSettings.teamCheck = Options.HighlightTeamCheck.Value
             _G.updateHighlights()
         end)
 
-        local TeamColorToggle = Tabs.Highlight:AddToggle("AutoTeamColor", {
+        local HighlightTeamColorToggle = Tabs.Highlight:AddToggle("AutoTeamColor", {
             Title = "Auto Team Color",
             Default = false
         })
 
-        TeamColorToggle:OnChanged(function()
+        HighlightTeamColorToggle:OnChanged(function()
             _G.highlightSettings.autoTeamColor = Options.AutoTeamColor.Value
             _G.updateHighlights()
         end)
 
-        local FillColorPicker = Tabs.Highlight:AddColorpicker("FillColor", {
+        local HighlightFillColorPicker = Tabs.Highlight:AddColorpicker("FillColor", {
             Title = "Fill Color",
             Default = Color3.fromRGB(255, 0, 0)
         })
 
-        FillColorPicker:OnChanged(function()
+        HighlightFillColorPicker:OnChanged(function()
             _G.highlightSettings.fillColor = Options.FillColor.Value
             _G.updateHighlights()
         end)
 
-        local FillTransparencySlider = Tabs.Highlight:AddSlider("FillTransparency", {
+        local HighlightFillTransparencySlider = Tabs.Highlight:AddSlider("FillTransparency", {
             Title = "Fill Transparency",
             Default = 0.5,
             Min = 0,
@@ -233,22 +233,22 @@ return function(Modules)
             Rounding = 2
         })
 
-        FillTransparencySlider:OnChanged(function()
+        HighlightFillTransparencySlider:OnChanged(function()
             _G.highlightSettings.fillTransparency = Options.FillTransparency.Value
             _G.updateHighlights()
         end)
 
-        local OutlineColorPicker = Tabs.Highlight:AddColorpicker("OutlineColor", {
+        local HighlightOutlineColorPicker = Tabs.Highlight:AddColorpicker("OutlineColor", {
             Title = "Outline Color",
             Default = Color3.fromRGB(255, 255, 255)
         })
 
-        OutlineColorPicker:OnChanged(function()
+        HighlightOutlineColorPicker:OnChanged(function()
             _G.highlightSettings.outlineColor = Options.OutlineColor.Value
             _G.updateHighlights()
         end)
 
-        local OutlineTransparencySlider = Tabs.Highlight:AddSlider("OutlineTransparency", {
+        local HighlightOutlineTransparencySlider = Tabs.Highlight:AddSlider("OutlineTransparency", {
             Title = "Outline Transparency",
             Default = 0,
             Min = 0,
@@ -256,7 +256,7 @@ return function(Modules)
             Rounding = 2
         })
 
-        OutlineTransparencySlider:OnChanged(function()
+        HighlightOutlineTransparencySlider:OnChanged(function()
             _G.highlightSettings.outlineTransparency = Options.OutlineTransparency.Value
             _G.updateHighlights()
         end)

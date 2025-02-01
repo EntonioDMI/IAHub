@@ -1,29 +1,24 @@
 return function(Fluent, Tab)
-    local Options = Fluent.Options
-    
     -- Services
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
     
     -- Variables
     local highlights = {}
-    local defaultColor = Color3.fromRGB(150, 150, 150) -- Серый цвет по умолчанию
+    local defaultColor = Color3.fromRGB(150, 150, 150)
     
     -- Functions
     local function getTeamColor(player)
-        -- Если у игрока есть команда и цвет команды
         if player.Team and player.Team.TeamColor then
             return player.Team.TeamColor.Color
         end
-        return defaultColor -- Возвращаем серый цвет, если нет команды или цвета команды
+        return defaultColor
     end
     
     local function isTeamMate(player)
-        -- Если у локального игрока нет команды, проверяем есть ли команда у другого игрока
         if not LocalPlayer.Team then
-            return player.Team == nil -- Если у обоих нет команды, значит они в одной команде
+            return player.Team == nil
         end
-        -- Если у обоих есть команда, сравниваем их
         return player.Team == LocalPlayer.Team
     end
     
@@ -48,7 +43,6 @@ return function(Fluent, Tab)
     local function createHighlight(player)
         if player == LocalPlayer then return end
         
-        -- Check if we should create highlight based on team settings
         if _G.highlightSettings.teamCheck and isTeamMate(player) then
             removeHighlight(player)
             return

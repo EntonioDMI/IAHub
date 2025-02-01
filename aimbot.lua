@@ -47,10 +47,23 @@ return function(Fluent, Tab)
         local direction = (part.Position - origin).Unit
         local rayParams = RaycastParams.new()
         rayParams.FilterType = Enum.RaycastFilterType.Blacklist
-        rayParams.FilterDescendantsInstances = {LocalPlayer.Character, part.Parent, workspace.CurrentCamera}
+        rayParams.FilterDescendantsInstances = {
+            LocalPlayer.Character,
+            part.Parent,
+            workspace.CurrentCamera,
+            -- Ignore accessories and tools
+            unpack(workspace:FindPartsInRegion3WithWhiteList(
+                Region3.new(origin, part.Position),
+                {workspace},
+                function(p)
+                    return p:IsA("Accessory") or p:IsA("Tool") or
+                           p.Transparency > 0.9 -- Ignore nearly invisible parts
+                end
+            ))
+        }
         rayParams.IgnoreWater = true
         
-        local result = workspace:Raycast(origin, direction * 1000, rayParams)
+        local result = workspace:Raycast(origin, direction * (part.Position - origin).Magnitude, rayParams)
         return result == nil or result.Instance:IsDescendantOf(part.Parent)
     end
     

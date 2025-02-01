@@ -1,117 +1,77 @@
 return function(Fluent, Tab)
-    -- Services
     local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
     local LocalPlayer = Players.LocalPlayer
-    
-    -- Variables
-    local highlights = {}
-    local defaultColor = Color3.fromRGB(150, 150, 150)
-    
-    -- Functions
-    local function getTeamColor(player)
-        if player.Team and player.Team.TeamColor then
-            return player.Team.TeamColor.Color
-        end
-        return defaultColor
-    end
-    
-    local function isTeamMate(player)
-        if not LocalPlayer.Team then
-            return player.Team == nil
-        end
-        return player.Team == LocalPlayer.Team
-    end
-    
-    local function updateHighlightColors(highlight, player)
-        if _G.highlightSettings.autoTeamColor then
-            highlight.FillColor = getTeamColor(player)
-        else
-            highlight.FillColor = _G.highlightSettings.fillColor
-        end
-        highlight.OutlineColor = _G.highlightSettings.outlineColor
-        highlight.FillTransparency = _G.highlightSettings.fillTransparency
-        highlight.OutlineTransparency = _G.highlightSettings.outlineTransparency
-    end
-    
-    local function removeHighlight(player)
-        if highlights[player] then
-            highlights[player]:Destroy()
-            highlights[player] = nil
+
+    -- Store original sizes
+    local originalSizes = {}
+
+    local function resetHitboxes()
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player == LocalPlayer then continue end
+            
+            local character = player.Character
+            if not character then continue end
+            
+            local head = character:FindFirstChild("Head")
+            local torso = character:FindFirstChild("HumanoidRootPart")
+            
+            if head and originalSizes[head] then
+                head.Size = originalSizes[head]
+                head.Transparency = 0
+            end
+            
+            if torso and originalSizes[torso] then
+                torso.Size = originalSizes[torso]
+                torso.Transparency = 0
+            end
         end
     end
-    
-    local function createHighlight(player)
-        if player == LocalPlayer then return end
-        
-        if _G.highlightSettings.teamCheck and isTeamMate(player) then
-            removeHighlight(player)
+
+    local function storeOriginalSize(part)
+        if not originalSizes[part] then
+            originalSizes[part] = part.Size
+        end
+    end
+
+    local function updateHitboxes()
+        if not _G.hitboxSettings.enabled then
+            resetHitboxes()
             return
         end
         
-        local highlight = Instance.new("Highlight")
-        updateHighlightColors(highlight, player)
-        
-        if player.Character then
-            highlight.Parent = player.Character
-            highlights[player] = highlight
-        end
-        
-        player.CharacterAdded:Connect(function(character)
-            highlight.Parent = character
-            highlights[player] = highlight
-            updateHighlightColors(highlight, player)
-        end)
-        
-        player:GetPropertyChangedSignal("Team"):Connect(function()
-            if highlights[player] then
-                if _G.highlightSettings.teamCheck and isTeamMate(player) then
-                    removeHighlight(player)
-                else
-                    updateHighlightColors(highlights[player], player)
-                end
-            end
-        end)
-    end
-    
-    -- Make updateHighlights function global so it can be called from UI callbacks
-    _G.updateHighlights = function()
         for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                if _G.highlightSettings.enabled then
-                    if _G.highlightSettings.teamCheck and isTeamMate(player) then
-                        removeHighlight(player)
-                    else
-                        if not highlights[player] then
-                            createHighlight(player)
-                        else
-                            updateHighlightColors(highlights[player], player)
-                        end
-                    end
-                else
-                    removeHighlight(player)
-                end
+            if player == LocalPlayer then continue end
+            
+            local character = player.Character
+            if not character then continue end
+            
+            local head = character:FindFirstChild("Head")
+            local torso = character:FindFirstChild("HumanoidRootPart")
+            
+            if head then storeOriginalSize(head) end
+            if torso then storeOriginalSize(torso) end
+            
+            -- Reset non-target parts first
+            if _G.hitboxSettings.targetPart == "Head" and torso then
+                torso.Size = originalSizes[torso]
+                torso.Transparency = 0
+            elseif _G.hitboxSettings.targetPart == "HumanoidRootPart" and head then
+                head.Size = originalSizes[head]
+                head.Transparency = 0
+            end
+            
+            -- Update target part
+            local targetPart = character:FindFirstChild(_G.hitboxSettings.targetPart)
+            if targetPart then
+                targetPart.Size = Vector3.new(_G.hitboxSettings.size, _G.hitboxSettings.size, _G.hitboxSettings.size)
+                targetPart.Transparency = _G.hitboxSettings.transparency
+                targetPart.BrickColor = BrickColor.new("Really blue")
+                targetPart.Material = "Neon"
+                targetPart.CanCollide = false
             end
         end
     end
-    
-    -- Connections for player events
-    Players.PlayerAdded:Connect(function(player)
-        if _G.highlightSettings.enabled then
-            createHighlight(player)
-        end
-    end)
-    
-    Players.PlayerRemoving:Connect(function(player)
-        removeHighlight(player)
-    end)
-    
-    -- Monitor LocalPlayer team changes
-    LocalPlayer:GetPropertyChangedSignal("Team"):Connect(_G.updateHighlights)
-    
-    -- Initial setup
-    for _, player in ipairs(Players:GetPlayers()) do
-        if _G.highlightSettings.enabled then
-            createHighlight(player)
-        end
-    end
+
+    RunService.RenderStepped:Connect(updateHitboxes)
 end

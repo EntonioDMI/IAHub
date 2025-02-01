@@ -13,7 +13,8 @@ return function(Fluent, Tab)
                 Transparency = part.Transparency,
                 Color = part.Color,
                 Material = part.Material,
-                CanCollide = part.CanCollide
+                CanCollide = part.CanCollide,
+                CustomPhysicalProperties = part.CustomPhysicalProperties
             }
             
             -- Store mesh properties if they exist
@@ -39,6 +40,7 @@ return function(Fluent, Tab)
         part.Color = props.Color
         part.Material = props.Material
         part.CanCollide = props.CanCollide
+        part.CustomPhysicalProperties = props.CustomPhysicalProperties
         
         -- Reset mesh if it exists
         if props.Mesh then
@@ -50,21 +52,6 @@ return function(Fluent, Tab)
                 mesh.Offset = props.Mesh.Offset
                 mesh.VertexColor = props.Mesh.VertexColor
             end
-        end
-    end
-
-    local function resetHitboxes()
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player == LocalPlayer then continue end
-            
-            local character = player.Character
-            if not character then continue end
-            
-            local head = character:FindFirstChild("Head")
-            local torso = character:FindFirstChild("HumanoidRootPart")
-            
-            if head then resetPart(head) end
-            if torso then resetPart(torso) end
         end
     end
 
@@ -94,7 +81,15 @@ return function(Fluent, Tab)
         part.Transparency = _G.hitboxSettings.transparency
         part.Color = _G.hitboxSettings.color
         part.Material = Enum.Material.ForceField
-        part.CanCollide = false -- Always disable collision to prevent players from getting stuck
+        
+        -- Completely disable collision
+        part.CanCollide = false
+        part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+        
+        -- Additional collision prevention
+        if part:IsA("BasePart") then
+            part.CollisionGroupId = 1
+        end
     end
 
     local function updateHitboxes()

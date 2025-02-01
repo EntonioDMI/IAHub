@@ -40,7 +40,8 @@ return function(Modules)
         enabled = false,
         targetPart = "Head",
         size = 8,
-        transparency = 0.7
+        transparency = 0.7,
+        color = Color3.fromRGB(0, 170, 255)
     }
 
     _G.highlightSettings = {
@@ -56,7 +57,8 @@ return function(Modules)
     do
         -- Aimbot Tab
         local AimbotEnabled = Tabs.Aimbot:AddToggle("AimbotEnabled", {
-            Title = "Enabled",
+            Title = "🎯 Precision Mode",
+            Description = "Unleash your inner pro gamer with pixel-perfect precision!",
             Default = false,
             Callback = function(Value)
                 _G.aimbotSettings.enabled = Value
@@ -64,7 +66,8 @@ return function(Modules)
         })
 
         local AimbotTeam = Tabs.Aimbot:AddToggle("TeamCheck", {
-            Title = "Team Check",
+            Title = "👥 Friend or Foe",
+            Description = "Don't accidentally target your teammates, unless they deserve it 😉",
             Default = false,
             Callback = function(Value)
                 _G.aimbotSettings.teamCheck = Value
@@ -72,7 +75,8 @@ return function(Modules)
         })
 
         local AimbotFOV = Tabs.Aimbot:AddToggle("ShowFOV", {
-            Title = "Show FOV",
+            Title = "👁️ Vision Circle",
+            Description = "See your targeting zone, like a predator marking their territory",
             Default = false,
             Callback = function(Value)
                 _G.aimbotSettings.drawFOV = Value
@@ -80,8 +84,8 @@ return function(Modules)
         })
 
         local AimbotFOVSlider = Tabs.Aimbot:AddSlider("FOV", {
-            Title = "FOV",
-            Description = "Field of View radius",
+            Title = "🎯 Targeting Range",
+            Description = "How far can you see? Adjust your vision like a hawk!",
             Default = 100,
             Min = 10,
             Max = 800,
@@ -92,8 +96,8 @@ return function(Modules)
         })
 
         local AimbotSensitivitySlider = Tabs.Aimbot:AddSlider("Sensitivity", {
-            Title = "Sensitivity",
-            Description = "Aim smoothness",
+            Title = "🎮 Smoothness",
+            Description = "From robot to human-like movements. Be sneaky!",
             Default = 1,
             Min = 0.1,
             Max = 2,
@@ -104,7 +108,8 @@ return function(Modules)
         })
 
         local AimbotTargetPart = Tabs.Aimbot:AddDropdown("TargetPart", {
-            Title = "Target Part",
+            Title = "🎯 Sweet Spot",
+            Description = "Choose your target - head for pros, torso for consistency",
             Values = {"Head", "Torso"},
             Default = "Head",
             Multi = false,
@@ -114,7 +119,8 @@ return function(Modules)
         })
 
         local AimbotWallCheck = Tabs.Aimbot:AddToggle("WallCheck", {
-            Title = "Wall Check",
+            Title = "🧱 Wall Awareness",
+            Description = "Don't be that person who shoots through walls!",
             Default = false,
             Callback = function(Value)
                 _G.aimbotSettings.wallCheck = Value
@@ -122,7 +128,8 @@ return function(Modules)
         })
 
         local AimbotAliveCheck = Tabs.Aimbot:AddToggle("AliveCheck", {
-            Title = "Alive Check",
+            Title = "💀 Vitality Check",
+            Description = "Stop shooting at corpses, they're already dead!",
             Default = false,
             Callback = function(Value)
                 _G.aimbotSettings.aliveCheck = Value
@@ -131,7 +138,8 @@ return function(Modules)
 
         -- Hitboxes Tab
         local HitboxEnabled = Tabs.Hitboxes:AddToggle("HitboxEnabled", {
-            Title = "Enabled",
+            Title = "📦 Hitbox Enhancement",
+            Description = "Make those tiny targets not so tiny anymore!",
             Default = false,
             Callback = function(Value)
                 _G.hitboxSettings.enabled = Value
@@ -139,7 +147,8 @@ return function(Modules)
         })
 
         local HitboxTargetPart = Tabs.Hitboxes:AddDropdown("HitboxPart", {
-            Title = "Target Part",
+            Title = "🎯 Target Zone",
+            Description = "Pick your preferred hitting spot - choose wisely!",
             Values = {"Head", "Torso"},
             Default = "Head",
             Multi = false,
@@ -149,8 +158,8 @@ return function(Modules)
         })
 
         local HitboxSize = Tabs.Hitboxes:AddSlider("HitboxSize", {
-            Title = "Hitbox Size",
-            Description = "Size multiplier",
+            Title = "📏 Size Matters",
+            Description = "From pixel to planet - how big do you want it?",
             Default = 8,
             Min = 1,
             Max = 20,
@@ -161,8 +170,8 @@ return function(Modules)
         })
 
         local HitboxTransparency = Tabs.Hitboxes:AddSlider("HitboxTransparency", {
-            Title = "Transparency",
-            Description = "Hitbox transparency",
+            Title = "👻 Ghost Mode",
+            Description = "Make it invisible or show off your advantage!",
             Default = 0.7,
             Min = 0,
             Max = 1,
@@ -172,9 +181,19 @@ return function(Modules)
             end
         })
 
+        local HitboxColor = Tabs.Hitboxes:AddColorpicker("HitboxColor", {
+            Title = "🎨 Hitbox Color",
+            Description = "Choose your favorite color for the hitbox!",
+            Default = Color3.fromRGB(0, 170, 255),
+            Callback = function(Value)
+                _G.hitboxSettings.color = Value
+            end
+        })
+
         -- Highlight Tab
         local HighlightEnabled = Tabs.Highlight:AddToggle("HighlightEnabled", {
-            Title = "Enabled",
+            Title = "✨ Glow Up",
+            Description = "Make enemies shine like Christmas trees!",
             Default = false,
             Callback = function(Value)
                 _G.highlightSettings.enabled = Value
@@ -183,7 +202,8 @@ return function(Modules)
         })
 
         local HighlightTeam = Tabs.Highlight:AddToggle("HighlightTeamCheck", {
-            Title = "Team Check",
+            Title = "🤝 Team Spirit",
+            Description = "Don't make your teammates glow, they're already bright!",
             Default = false,
             Callback = function(Value)
                 _G.highlightSettings.teamCheck = Value
@@ -192,7 +212,8 @@ return function(Modules)
         })
 
         local HighlightTeamColor = Tabs.Highlight:AddToggle("AutoTeamColor", {
-            Title = "Auto Team Color",
+            Title = "🎨 Team Colors",
+            Description = "Let the game decide the fashion show colors",
             Default = false,
             Callback = function(Value)
                 _G.highlightSettings.autoTeamColor = Value
@@ -201,7 +222,8 @@ return function(Modules)
         })
 
         local HighlightFillColor = Tabs.Highlight:AddColorpicker("FillColor", {
-            Title = "Fill Color",
+            Title = "🎨 Inner Glow",
+            Description = "Paint your enemies in your favorite color!",
             Default = Color3.fromRGB(255, 0, 0),
             Callback = function(Value)
                 _G.highlightSettings.fillColor = Value
@@ -210,7 +232,8 @@ return function(Modules)
         })
 
         local HighlightFillTransparency = Tabs.Highlight:AddSlider("FillTransparency", {
-            Title = "Fill Transparency",
+            Title = "👻 Inner Ghost",
+            Description = "Control how see-through the glow is",
             Default = 0.5,
             Min = 0,
             Max = 1,
@@ -222,7 +245,8 @@ return function(Modules)
         })
 
         local HighlightOutlineColor = Tabs.Highlight:AddColorpicker("OutlineColor", {
-            Title = "Outline Color",
+            Title = "✏️ Outline Art",
+            Description = "Give them a fancy border of your choice!",
             Default = Color3.fromRGB(255, 255, 255),
             Callback = function(Value)
                 _G.highlightSettings.outlineColor = Value
@@ -231,7 +255,8 @@ return function(Modules)
         })
 
         local HighlightOutlineTransparency = Tabs.Highlight:AddSlider("OutlineTransparency", {
-            Title = "Outline Transparency",
+            Title = "🌫️ Outline Fade",
+            Description = "Make the outline pop or keep it subtle",
             Default = 0,
             Min = 0,
             Max = 1,
@@ -283,8 +308,8 @@ return function(Modules)
 
     -- Show loaded notification
     Fluent:Notify({
-        Title = "IAHub Loaded",
-        Content = "v1.0 Alpha by EntonioDMI",
+        Title = "✨ IAHub Loaded",
+        Content = "Ready to rock! v1.0 Alpha by EntonioDMI",
         Duration = 5
     })
 

@@ -15,19 +15,6 @@ return function(Fluent, Tab)
     FOVCircle.Transparency = 1
     FOVCircle.Visible = false
     
-    -- Settings
-    _G.aimbotSettings = {
-        enabled = false,
-        teamCheck = true,
-        fov = 100,
-        drawFOV = true,
-        triggerKey = Enum.UserInputType.MouseButton2,
-        lockPart = "Head",
-        wallCheck = true,
-        aliveCheck = true,
-        sensitivity = 1
-    }
-    
     -- Functions
     local function isTeamMate(player)
         if not LocalPlayer.Team then

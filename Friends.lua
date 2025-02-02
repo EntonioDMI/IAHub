@@ -1,30 +1,12 @@
 return function(Fluent, Tab)
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
-    local HttpService = game:GetService("HttpService")
     local UserInputService = game:GetService("UserInputService")
     local Camera = workspace.CurrentCamera
     
-    -- Load friends list from file
+    -- Friends list (temporary, not saved)
     local friends = {}
     local addingFriends = false
-    
-    -- Function to save friends list
-    local function saveFriends()
-        local data = { friends = friends }
-        writefile("Friends.yml", HttpService:JSONEncode(data))
-    end
-    
-    -- Function to load friends list
-    local function loadFriends()
-        if isfile("Friends.yml") then
-            local data = HttpService:JSONDecode(readfile("Friends.yml"))
-            friends = data.friends or {}
-        end
-    end
-    
-    -- Load friends on startup
-    loadFriends()
     
     -- Function to check if player is friend
     _G.isFriend = function(player)
@@ -70,7 +52,6 @@ return function(Fluent, Tab)
         end
         
         showFeedbackEffect(player.Character, isAdding)
-        saveFriends()
         updateFriendsList()
         
         -- Update highlights if enabled

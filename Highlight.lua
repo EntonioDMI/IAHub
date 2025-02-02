@@ -2,12 +2,14 @@ return function(Fluent, Tab)
     -- Services
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
+    local TweenService = game:GetService("TweenService")
     local LocalPlayer = Players.LocalPlayer
     
     -- Variables
     local highlights = {}
     local defaultColor = Color3.fromRGB(150, 150, 150)
     local cleanupQueue = {}
+    local friendColor = Color3.fromRGB(0, 255, 0)
     
     -- Functions
     local function getTeamColor(player)
@@ -27,14 +29,26 @@ return function(Fluent, Tab)
     local function updateHighlightColors(highlight, player)
         if not highlight or not highlight.Parent then return end
         
-        if _G.highlightSettings.autoTeamColor then
-            highlight.FillColor = getTeamColor(player)
+        if _G.isFriend and _G.isFriend(player) then
+            -- Pulsing green effect for friends
+            local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+            local tween = TweenService:Create(highlight, tweenInfo, {
+                FillColor = friendColor,
+                FillTransparency = 0.3
+            })
+            tween:Play()
+            highlight.OutlineColor = friendColor
+            highlight.OutlineTransparency = 0
         else
-            highlight.FillColor = _G.highlightSettings.fillColor
+            if _G.highlightSettings.autoTeamColor then
+                highlight.FillColor = getTeamColor(player)
+            else
+                highlight.FillColor = _G.highlightSettings.fillColor
+            end
+            highlight.OutlineColor = _G.highlightSettings.outlineColor
+            highlight.FillTransparency = _G.highlightSettings.fillTransparency
+            highlight.OutlineTransparency = _G.highlightSettings.outlineTransparency
         end
-        highlight.OutlineColor = _G.highlightSettings.outlineColor
-        highlight.FillTransparency = _G.highlightSettings.fillTransparency
-        highlight.OutlineTransparency = _G.highlightSettings.outlineTransparency
     end
     
     local function cleanupHighlight(highlight)
@@ -65,14 +79,14 @@ return function(Fluent, Tab)
     local function queueHighlightCleanup(highlight)
         table.insert(cleanupQueue, {
             highlight = highlight,
-            timestamp = tick() + 1 -- Delay cleanup by 1 second
+            timestamp = tick() + 1
         })
     end
     
     local function createHighlight(player)
         if player == LocalPlayer then return end
         
-        if _G.highlightSettings.teamCheck and isTeamMate(player) then
+        if _G.highlightSettings.teamCheck and isTeamMate(player) and not (_G.isFriend and _G.isFriend(player)) then
             removeHighlight(player)
             return
         end
@@ -92,12 +106,10 @@ return function(Fluent, Tab)
         -- Character added handler
         local characterAddedConnection
         characterAddedConnection = player.CharacterAdded:Connect(function(character)
-            -- Queue old highlight for cleanup if it exists
             if highlights[player] then
                 queueHighlightCleanup(highlights[player])
             end
             
-            -- Create new highlight
             highlight = Instance.new("Highlight")
             updateHighlightColors(highlight, player)
             highlight.Parent = character
@@ -116,7 +128,7 @@ return function(Fluent, Tab)
         local teamChangedConnection
         teamChangedConnection = player:GetPropertyChangedSignal("Team"):Connect(function()
             if highlights[player] then
-                if _G.highlightSettings.teamCheck and isTeamMate(player) then
+                if _G.highlightSettings.teamCheck and isTeamMate(player) and not (_G.isFriend and _G.isFriend(player)) then
                     removeHighlight(player)
                 else
                     updateHighlightColors(highlights[player], player)
@@ -152,7 +164,6 @@ return function(Fluent, Tab)
             end
         end
         
-        -- Process cleanup queue
         processCleanupQueue()
     end
     

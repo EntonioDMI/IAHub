@@ -15,11 +15,11 @@ return function(Modules)
             fov = 100,
             sensitivity = 0.5,
             lockPart = "Head",
-            teamCheck = true,
-            aliveCheck = true,
-            wallCheck = true,
+            teamCheck = false,
+            aliveCheck = false,
+            wallCheck = false,
             triggerKey = Enum.UserInputType.MouseButton2,
-            drawFOV = true
+            drawFOV = false
         }
     end
 
@@ -40,8 +40,8 @@ return function(Modules)
             outlineColor = Color3.fromRGB(255, 255, 255),
             fillTransparency = 0.5,
             outlineTransparency = 0,
-            teamCheck = true,
-            autoTeamColor = true
+            teamCheck = false,
+            autoTeamColor = false
         }
     end
 

@@ -1,6 +1,7 @@
 return function(Fluent, Tab)
     -- Services
     local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
     local LocalPlayer = Players.LocalPlayer
     
     -- Variables
@@ -48,6 +49,9 @@ return function(Fluent, Tab)
             return
         end
         
+        -- Remove existing highlight if any
+        removeHighlight(player)
+        
         local highlight = Instance.new("Highlight")
         updateHighlightColors(highlight, player)
         
@@ -75,21 +79,15 @@ return function(Fluent, Tab)
     
     -- Make updateHighlights function global so it can be called from UI callbacks
     _G.updateHighlights = function()
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                if _G.highlightSettings.enabled then
-                    if _G.highlightSettings.teamCheck and isTeamMate(player) then
-                        removeHighlight(player)
-                    else
-                        if not highlights[player] then
-                            createHighlight(player)
-                        else
-                            updateHighlightColors(highlights[player], player)
-                        end
-                    end
-                else
-                    removeHighlight(player)
+        if _G.highlightSettings.enabled then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    createHighlight(player)
                 end
+            end
+        else
+            for _, player in ipairs(Players:GetPlayers()) do
+                removeHighlight(player)
             end
         end
     end
@@ -108,10 +106,13 @@ return function(Fluent, Tab)
     -- Monitor LocalPlayer team changes
     LocalPlayer:GetPropertyChangedSignal("Team"):Connect(_G.updateHighlights)
     
-    -- Initial setup
-    for _, player in ipairs(Players:GetPlayers()) do
+    -- Run updateHighlights on RenderStepped to ensure highlights are always updated
+    RunService.RenderStepped:Connect(function()
         if _G.highlightSettings.enabled then
-            createHighlight(player)
+            _G.updateHighlights()
         end
-    end
+    end)
+    
+    -- Initial setup
+    _G.updateHighlights()
 end

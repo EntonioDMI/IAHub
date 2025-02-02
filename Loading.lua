@@ -10,6 +10,20 @@ if existingGui then
     existingGui:Destroy()
 end
 
+-- Check if modules are already loaded
+if _G.IAHubModulesLoaded then
+    -- Skip loading screen and load menu directly
+    local success, Menu = pcall(function()
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/EntonioDMI/IAHub/main/Fluent.lua"))()
+    end)
+    if not success then
+        warn("Failed to load Menu:", Menu)
+        return
+    end
+    Menu(_G.IAHubModules)
+    return
+end
+
 local function showLoadingScreen()
     -- Создаем ScreenGui с максимальным приоритетом
     local screenGui = Instance.new("ScreenGui")
@@ -328,7 +342,7 @@ Modules.InterfaceManager = InterfaceManager
 -- Загружаем Aimbot Module
 nextStep("Loading Aimbot Module...")
 local success, AimbotModule = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/EntonioDMI/IAHub/main/aimbot.lua"))()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/EntonioDMI/IAHub/main/Aimbot.lua"))()
 end)
 if not success then
     warn("Failed to load Aimbot Module:", AimbotModule)
@@ -339,7 +353,7 @@ Modules.Aimbot = AimbotModule
 -- Загружаем Hitboxes Module
 nextStep("Loading Hitboxes Module...")
 local success, HitboxesModule = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/EntonioDMI/IAHub/main/hitboxes.lua"))()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/EntonioDMI/IAHub/main/Hitboxes.lua"))()
 end)
 if not success then
     warn("Failed to load Hitboxes Module:", HitboxesModule)
@@ -350,7 +364,7 @@ Modules.Hitboxes = HitboxesModule
 -- Загружаем Highlight Module
 nextStep("Loading Highlight Module...")
 local success, HighlightModule = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/EntonioDMI/IAHub/main/highlight.lua"))()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/EntonioDMI/IAHub/main/Highlight.lua"))()
 end)
 if not success then
     warn("Failed to load Highlight Module:", HighlightModule)
@@ -361,7 +375,7 @@ Modules.Highlight = HighlightModule
 -- Загружаем Misc Module
 nextStep("Loading Misc Module...")
 local success, MiscModule = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/EntonioDMI/IAHub/main/misc.lua"))()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/EntonioDMI/IAHub/main/Misc.lua"))()
 end)
 if not success then
     warn("Failed to load Misc Module:", MiscModule)
@@ -369,9 +383,13 @@ if not success then
 end
 Modules.Misc = MiscModule
 
+-- Set the flag and store modules
+_G.IAHubModulesLoaded = true
+_G.IAHubModules = Modules
+
 -- Загружаем меню
 local success, Menu = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/EntonioDMI/IAHub/main/menu.lua"))()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/EntonioDMI/IAHub/main/Fluent.lua"))()
 end)
 if not success then
     warn("Failed to load Menu:", Menu)

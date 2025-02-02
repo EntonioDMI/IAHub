@@ -10,6 +10,8 @@ return function(Fluent, Tab)
     local defaultColor = Color3.fromRGB(150, 150, 150)
     local cleanupQueue = {}
     local friendColor = Color3.fromRGB(0, 255, 0)
+    local bossColor = Color3.fromRGB(255, 0, 0)
+    local npcColor = Color3.fromRGB(255, 165, 0)
     local friendAnimations = {}
     local transitionTweens = {}
     
@@ -34,7 +36,7 @@ return function(Fluent, Tab)
             friendAnimations[player] = nil
         end
     end
-    
+
     local function cancelTransitionTween(highlight)
         if transitionTweens[highlight] then
             transitionTweens[highlight]:Cancel()
@@ -42,28 +44,57 @@ return function(Fluent, Tab)
         end
     end
     
-    local function updateHighlightColors(highlight, player, isNPC, isBoss)
+    local function updateHighlightColors(highlight, model, isNPC, isBoss)
         if not highlight or not highlight.Parent then return end
+        
+        local player = not isNPC and not isBoss and Players:GetPlayerFromCharacter(model)
         
         stopFriendAnimation(player)
         cancelTransitionTween(highlight)
         
+        -- Determine colors and settings based on type
+        local fillColor, outlineColor
+        local settings = _G.highlightSettings
+        
         if player and _G.isFriend and _G.isFriend(player) then
-            highlight.FillColor = friendColor
-            highlight.OutlineColor = friendColor
-            
-            if not _G.highlightSettings.enabled then
-                highlight.FillTransparency = 1
-                highlight.OutlineTransparency = 0
-                return
-            end
-            
-            highlight.FillTransparency = _G.highlightSettings.fillTransparency
-            highlight.OutlineTransparency = _G.highlightSettings.outlineTransparency
-            
+            fillColor = friendColor
+            outlineColor = friendColor
+        elseif isBoss then
+            fillColor = bossColor
+            outlineColor = bossColor
+        elseif isNPC then
+            fillColor = npcColor
+            outlineColor = npcColor
+        else
+            fillColor = settings.autoTeamColor and player and getTeamColor(player) or settings.fillColor
+            outlineColor = settings.outlineColor
+        end
+        
+        highlight.FillColor = fillColor
+        highlight.OutlineColor = outlineColor
+        
+        -- Create smooth transition tween
+        local enabled = (isNPC and settings.npcEnabled) or 
+                       (isBoss and settings.bossEnabled) or 
+                       (not isNPC and not isBoss and settings.enabled)
+        
+        local targetFill = enabled and settings.fillTransparency or 1
+        local targetOutline = enabled and settings.outlineTransparency or 1
+        
+        transitionTweens[highlight] = TweenService:Create(highlight, 
+            TweenInfo.new(0.3, Enum.EasingStyle.Quad), 
+            {
+                FillTransparency = targetFill,
+                OutlineTransparency = targetOutline
+            }
+        )
+        transitionTweens[highlight]:Play()
+        
+        -- Special animation for friends
+        if player and _G.isFriend and _G.isFriend(player) and settings.enabled then
             local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
-            local minFillTransparency = _G.highlightSettings.fillTransparency
-            local minOutlineTransparency = _G.highlightSettings.outlineTransparency
+            local minFillTransparency = settings.fillTransparency
+            local minOutlineTransparency = settings.outlineTransparency
             
             local tween = TweenService:Create(highlight, tweenInfo, {
                 FillTransparency = math.min(0.8, minFillTransparency + 0.3),
@@ -72,59 +103,25 @@ return function(Fluent, Tab)
             
             friendAnimations[player] = tween
             tween:Play()
-        else
-            local targetFill = 1
-            local targetOutline = 1
-            
-            if isNPC then
-                if isBoss then
-                    highlight.FillColor = _G.highlightSettings.bossColor
-                    highlight.OutlineColor = _G.highlightSettings.bossColor
-                    if _G.highlightSettings.bossEnabled then
-                        targetFill = _G.highlightSettings.fillTransparency
-                        targetOutline = _G.highlightSettings.outlineTransparency
-                    end
-                else
-                    highlight.FillColor = _G.highlightSettings.npcColor
-                    highlight.OutlineColor = _G.highlightSettings.npcColor
-                    if _G.highlightSettings.npcEnabled then
-                        targetFill = _G.highlightSettings.fillTransparency
-                        targetOutline = _G.highlightSettings.outlineTransparency
-                    end
-                end
-            else
-                if _G.highlightSettings.enabled then
-                    targetFill = _G.highlightSettings.fillTransparency
-                    targetOutline = _G.highlightSettings.outlineTransparency
-                    
-                    if _G.highlightSettings.autoTeamColor then
-                        highlight.FillColor = getTeamColor(player)
-                    else
-                        highlight.FillColor = _G.highlightSettings.fillColor
-                    end
-                    highlight.OutlineColor = _G.highlightSettings.outlineColor
-                end
-            end
-            
-            transitionTweens[highlight] = TweenService:Create(highlight, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-                FillTransparency = targetFill,
-                OutlineTransparency = targetOutline
-            })
-            transitionTweens[highlight]:Play()
         end
     end
     
     local function cleanupHighlight(highlight)
+        cancelTransitionTween(highlight)
         if highlight and highlight.Parent then
             highlight:Destroy()
         end
     end
     
-    local function removeHighlight(player)
-        stopFriendAnimation(player)
-        if highlights[player] then
-            cleanupHighlight(highlights[player])
-            highlights[player] = nil
+    local function removeHighlight(model)
+        local player = Players:GetPlayerFromCharacter(model)
+        if player then
+            stopFriendAnimation(player)
+        end
+        
+        if highlights[model] then
+            cleanupHighlight(highlights[model])
+            highlights[model] = nil
         end
     end
     
@@ -132,9 +129,7 @@ return function(Fluent, Tab)
         for i = #cleanupQueue, 1, -1 do
             local item = cleanupQueue[i]
             if item.timestamp <= tick() then
-                if item.highlight and item.highlight.Parent then
-                    item.highlight:Destroy()
-                end
+                cleanupHighlight(item.highlight)
                 table.remove(cleanupQueue, i)
             end
         end
@@ -147,148 +142,251 @@ return function(Fluent, Tab)
         })
     end
     
-    local function createHighlight(player)
-        if player == LocalPlayer then return end
+    local function createHighlight(model, isNPC, isBoss)
+        if model == LocalPlayer.Character then return end
         
-        if _G.highlightSettings.teamCheck and isTeamMate(player) and not (_G.isFriend and _G.isFriend(player)) then
-            removeHighlight(player)
+        local player = not isNPC and not isBoss and Players:GetPlayerFromCharacter(model)
+        
+        if player and _G.highlightSettings.teamCheck and isTeamMate(player) and 
+           not (_G.isFriend and _G.isFriend(player)) then
+            removeHighlight(model)
             return
         end
         
-        removeHighlight(player)
+        removeHighlight(model)
         
         local highlight = Instance.new("Highlight")
-        updateHighlightColors(highlight, player, false, false)
+        updateHighlightColors(highlight, model, isNPC, isBoss)
+        highlight.Parent = model
+        highlights[model] = highlight
         
-        if player.Character then
-            highlight.Parent = player.Character
-            highlights[player] = highlight
+        -- Character added/removing handlers for players
+        if player then
+            player.CharacterAdded:Connect(function(character)
+                if highlights[model] then
+                    queueHighlightCleanup(highlights[model])
+                end
+                
+                highlight = Instance.new("Highlight")
+                updateHighlightColors(highlight, character, false, false)
+                highlight.Parent = character
+                highlights[character] = highlight
+            end)
+            
+            player.CharacterRemoving:Connect(function(character)
+                if highlights[character] then
+                    queueHighlightCleanup(highlights[character])
+                    highlights[character] = nil
+                end
+            end)
+            
+            player:GetPropertyChangedSignal("Team"):Connect(function()
+                if highlights[player.Character] then
+                    if _G.highlightSettings.teamCheck and isTeamMate(player) and 
+                       not (_G.isFriend and _G.isFriend(player)) then
+                        removeHighlight(player.Character)
+                    else
+                        updateHighlightColors(highlights[player.Character], player.Character, false, false)
+                    end
+                end
+            end)
         end
         
-        local characterAddedConnection
-        characterAddedConnection = player.CharacterAdded:Connect(function(character)
-            if highlights[player] then
-                queueHighlightCleanup(highlights[player])
-            end
-            
-            highlight = Instance.new("Highlight")
-            updateHighlightColors(highlight, player, false, false)
-            highlight.Parent = character
-            highlights[player] = highlight
-        end)
-        
-        player.CharacterRemoving:Connect(function()
-            if highlights[player] then
-                queueHighlightCleanup(highlights[player])
-                highlights[player] = nil
-            end
-        end)
-        
-        local teamChangedConnection
-        teamChangedConnection = player:GetPropertyChangedSignal("Team"):Connect(function()
-            if highlights[player] then
-                if _G.highlightSettings.teamCheck and isTeamMate(player) and not (_G.isFriend and _G.isFriend(player)) then
-                    removeHighlight(player)
-                else
-                    updateHighlightColors(highlights[player], player, false, false)
-                end
-            end
-        end)
-        
-        player.AncestryChanged:Connect(function(_, parent)
+        -- Cleanup when model is removed
+        model.AncestryChanged:Connect(function(_, parent)
             if not parent then
-                if characterAddedConnection then
-                    characterAddedConnection:Disconnect()
-                end
-                if teamChangedConnection then
-                    teamChangedConnection:Disconnect()
-                end
-                removeHighlight(player)
+                removeHighlight(model)
             end
         end)
     end
+    
+    local function updateHighlights()
+        processCleanupQueue()
+        
+        -- Update players
+        if _G.highlightSettings.enabled then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    createHighlight(player.Character, false, false)
+                end
+            end
+        end
+        
+        -- Update NPCs
+        if _G.highlightSettings.npcEnabled then
+            local npcs = workspace:FindFirstChild("NPCs")
+            if npcs then
+                for _, npc in ipairs(npcs:GetChildren()) do
+                    if npc:IsA("Model") then
+                        createHighlight(npc, true, false)
+                    end
+                end
+            end
+        end
+        
+        -- Update Bosses
+        if _G.highlightSettings.bossEnabled then
+            local bosses = workspace.NPCs:FindFirstChild("Boss")
+            if bosses then
+                for _, boss in ipairs(bosses:GetChildren()) do
+                    if boss:IsA("Model") then
+                        createHighlight(boss, false, true)
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Create UI elements
+    local highlightSection = Tab:AddSection("ESP Settings")
+    
+    -- Player ESP
+    local playerToggle = Tab:AddToggle("ESPEnabled", {
+        Title = "Player ESP",
+        Description = "Enable ESP for players",
+        Default = false,
+        Callback = function(Value)
+            _G.highlightSettings.enabled = Value
+            if not Value then
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player.Character then
+                        removeHighlight(player.Character)
+                    end
+                end
+            end
+        end
+    })
+    
+    -- NPC ESP
+    local npcToggle = Tab:AddToggle("NPCESPEnabled", {
+        Title = "NPC ESP",
+        Description = "Enable ESP for NPCs",
+        Default = false,
+        Callback = function(Value)
+            _G.highlightSettings.npcEnabled = Value
+            if not Value then
+                local npcs = workspace:FindFirstChild("NPCs")
+                if npcs then
+                    for _, npc in ipairs(npcs:GetChildren()) do
+                        if npc:IsA("Model") then
+                            removeHighlight(npc)
+                        end
+                    end
+                end
+            end
+        end
+    })
+    
+    -- Boss ESP
+    local bossToggle = Tab:AddToggle("BossESPEnabled", {
+        Title = "Boss ESP",
+        Description = "Enable ESP for bosses",
+        Default = false,
+        Callback = function(Value)
+            _G.highlightSettings.bossEnabled = Value
+            if not Value then
+                local bosses = workspace.NPCs:FindFirstChild("Boss")
+                if bosses then
+                    for _, boss in ipairs(bosses:GetChildren()) do
+                        if boss:IsA("Model") then
+                            removeHighlight(boss)
+                        end
+                    end
+                end
+            end
+        end
+    })
+    
+    -- Common Settings
+    Tab:AddToggle("TeamCheck", {
+        Title = "Team Check",
+        Description = "Only show ESP for enemies",
+        Default = true,
+        Callback = function(Value)
+            _G.highlightSettings.teamCheck = Value
+        end
+    })
+    
+    Tab:AddToggle("AutoTeamColor", {
+        Title = "Auto Team Color",
+        Description = "Use team colors for ESP",
+        Default = true,
+        Callback = function(Value)
+            _G.highlightSettings.autoTeamColor = Value
+        end
+    })
+    
+    Tab:AddColorPicker("FillColor", {
+        Title = "Fill Color",
+        Description = "Choose ESP fill color",
+        Default = Color3.fromRGB(255, 0, 0),
+        Callback = function(Value)
+            _G.highlightSettings.fillColor = Value
+        end
+    })
+    
+    Tab:AddColorPicker("OutlineColor", {
+        Title = "Outline Color",
+        Description = "Choose ESP outline color",
+        Default = Color3.fromRGB(255, 255, 255),
+        Callback = function(Value)
+            _G.highlightSettings.outlineColor = Value
+        end
+    })
+    
+    Tab:AddSlider("FillTransparency", {
+        Title = "Fill Transparency",
+        Description = "Adjust ESP fill transparency",
+        Default = 0.5,
+        Min = 0,
+        Max = 1,
+        Rounding = 2,
+        Callback = function(Value)
+            _G.highlightSettings.fillTransparency = Value
+        end
+    })
+    
+    Tab:AddSlider("OutlineTransparency", {
+        Title = "Outline Transparency",
+        Description = "Adjust ESP outline transparency",
+        Default = 0,
+        Min = 0,
+        Max = 1,
+        Rounding = 2,
+        Callback = function(Value)
+            _G.highlightSettings.outlineTransparency = Value
+        end
+    })
     
     -- Make updateHighlights function global
-    _G.updateHighlights = function()
-        -- Update player highlights
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                if _G.highlightSettings.enabled then
-                    createHighlight(player)
-                else
-                    removeHighlight(player)
-                end
-            end
-        end
-        
-        -- Update NPC highlights
-        local npcs = workspace:FindFirstChild("NPCs")
-        if npcs then
-            -- Regular NPCs
-            for _, npc in ipairs(npcs:GetChildren()) do
-                if npc:FindFirstChild("Humanoid") and not npc:IsDescendantOf(npcs.Boss) then
-                    if _G.highlightSettings.npcEnabled then
-                        local highlight = npc:FindFirstChild("Highlight") or Instance.new("Highlight")
-                        highlight.Parent = npc
-                        updateHighlightColors(highlight, nil, true, false)
-                    else
-                        local highlight = npc:FindFirstChild("Highlight")
-                        if highlight then
-                            highlight:Destroy()
-                        end
-                    end
-                end
-            end
-            
-            -- Boss NPCs
-            local bossFolder = npcs:FindFirstChild("Boss")
-            if bossFolder then
-                for _, boss in ipairs(bossFolder:GetChildren()) do
-                    if boss:FindFirstChild("Humanoid") then
-                        local isPlayerBoss = Players:GetPlayerFromCharacter(boss) ~= nil
-                        
-                        if _G.highlightSettings.bossEnabled or isPlayerBoss then
-                            local highlight = boss:FindFirstChild("Highlight") or Instance.new("Highlight")
-                            highlight.Parent = boss
-                            updateHighlightColors(highlight, nil, true, true)
-                        else
-                            local highlight = boss:FindFirstChild("Highlight")
-                            if highlight then
-                                highlight:Destroy()
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        
-        processCleanupQueue()
-    end
+    _G.updateHighlights = updateHighlights
     
-    -- Player events
+    -- Setup connections
     Players.PlayerAdded:Connect(function(player)
-        if _G.highlightSettings.enabled then
-            createHighlight(player)
+        if player.Character then
+            createHighlight(player.Character, false, false)
         end
     end)
     
     Players.PlayerRemoving:Connect(function(player)
-        removeHighlight(player)
+        if player.Character then
+            removeHighlight(player.Character)
+        end
     end)
     
-    -- Monitor LocalPlayer team changes
-    LocalPlayer:GetPropertyChangedSignal("Team"):Connect(_G.updateHighlights)
+    LocalPlayer:GetPropertyChangedSignal("Team"):Connect(updateHighlights)
     
-    -- Process cleanup queue and update highlights
     RunService.RenderStepped:Connect(function()
         processCleanupQueue()
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and highlights[player] then
-                updateHighlightColors(highlights[player], player, false, false)
+        for model, highlight in pairs(highlights) do
+            if model and highlight then
+                local isNPC = model:IsDescendantOf(workspace.NPCs) and not model:IsDescendantOf(workspace.NPCs.Boss)
+                local isBoss = model:IsDescendantOf(workspace.NPCs.Boss)
+                updateHighlightColors(highlight, model, isNPC, isBoss)
             end
         end
     end)
     
     -- Initial setup
-    _G.updateHighlights()
+    updateHighlights()
 end

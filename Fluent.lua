@@ -89,9 +89,9 @@ return function(Modules)
 
     local AimbotSensitivity = Tabs.Aimbot:AddSlider("AimbotSensitivity", {
         Title = "Sensitivity",
-        Description = "Fine-tune the smoothness of aim assistance",
+        Description = "Adjust the smoothness of aim assistance (lower = smoother)",
         Default = _G.aimbotSettings.sensitivity,
-        Min = 0.1,
+        Min = 0.01,
         Max = 1,
         Rounding = 2,
         Callback = function(Value)

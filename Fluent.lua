@@ -61,9 +61,16 @@ return function(Modules)
         Aimbot = Window:AddTab({ Title = "Aimbot", Icon = "target" }),
         Hitboxes = Window:AddTab({ Title = "Hitboxes", Icon = "box" }),
         Visuals = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
+        Friends = Window:AddTab({ Title = "Friends", Icon = "users" }),
         Misc = Window:AddTab({ Title = "Misc", Icon = "settings" }),
         Settings = Window:AddTab({ Title = "Settings", Icon = "sliders" })
     }
+
+    -- Show warning about head hitboxes
+    Tabs.Hitboxes:AddParagraph({
+        Title = "⚠️ Warning",
+        Content = "Head hitbox modification may not work correctly in many games. It's recommended to use Torso instead for better compatibility."
+    })
 
     -- Aimbot Tab
     local AimbotToggle = Tabs.Aimbot:AddToggle("AimbotEnabled", {
@@ -277,6 +284,10 @@ return function(Modules)
 
     if Modules.Highlight then
         Modules.Highlight(Fluent, Tabs.Visuals)
+    end
+
+    if Modules.Friends then
+        Modules.Friends(Fluent, Tabs.Friends)
     end
 
     if Modules.Misc then

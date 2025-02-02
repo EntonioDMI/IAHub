@@ -5,6 +5,7 @@ return function(Fluent, Tab)
 
     -- Store original properties
     local originalProps = {}
+    local activeHitboxes = {}
 
     local function storeOriginalProperties(part)
         if not originalProps[part] then
@@ -14,7 +15,8 @@ return function(Fluent, Tab)
                 Color = part.Color,
                 Material = part.Material,
                 CanCollide = part.CanCollide,
-                CustomPhysicalProperties = part.CustomPhysicalProperties
+                CustomPhysicalProperties = part.CustomPhysicalProperties,
+                CollisionGroupId = part.CollisionGroupId
             }
             
             -- Store mesh properties if they exist
@@ -41,6 +43,7 @@ return function(Fluent, Tab)
         part.Material = props.Material
         part.CanCollide = props.CanCollide
         part.CustomPhysicalProperties = props.CustomPhysicalProperties
+        part.CollisionGroupId = props.CollisionGroupId
         
         -- Reset mesh if it exists
         if props.Mesh then
@@ -53,6 +56,8 @@ return function(Fluent, Tab)
                 mesh.VertexColor = props.Mesh.VertexColor
             end
         end
+
+        activeHitboxes[part] = nil
     end
 
     local function modifyHitbox(part)
@@ -85,16 +90,23 @@ return function(Fluent, Tab)
         -- Completely disable collision
         part.CanCollide = false
         part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+        part.CollisionGroupId = 32 -- Use a unique collision group to prevent any collisions
         
-        -- Additional collision prevention
-        if part:IsA("BasePart") then
-            part.CollisionGroupId = 1
+        activeHitboxes[part] = true
+    end
+
+    local function resetAllHitboxes()
+        for part, _ in pairs(activeHitboxes) do
+            if part and part.Parent then
+                resetPart(part)
+            end
         end
+        activeHitboxes = {}
     end
 
     local function updateHitboxes()
         if not _G.hitboxSettings.enabled then
-            resetHitboxes()
+            resetAllHitboxes()
             return
         end
         
@@ -120,8 +132,12 @@ return function(Fluent, Tab)
 
     -- Clean up when the script is disabled
     game:GetService("Players").PlayerRemoving:Connect(function(player)
-        if originalProps[player] then
-            originalProps[player] = nil
+        if player.Character then
+            for _, part in ipairs(player.Character:GetDescendants()) do
+                if activeHitboxes[part] then
+                    resetPart(part)
+                end
+            end
         end
     end)
 

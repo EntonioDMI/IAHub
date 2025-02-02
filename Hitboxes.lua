@@ -80,7 +80,7 @@ return function(Fluent, Tab)
             local scaleFactor = targetSize / math.max(originalSize.X, originalSize.Y, originalSize.Z)
             
             -- Limit scale factor to prevent infinite scaling
-            scaleFactor = math.min(scaleFactor, 10) -- Maximum 10x scaling for mesh parts
+            scaleFactor = math.min(scaleFactor, 5) -- Maximum 5x scaling for mesh parts
             
             mesh.Scale = Vector3.new(scaleFactor, scaleFactor, scaleFactor)
             
@@ -118,8 +118,8 @@ return function(Fluent, Tab)
             collisionBox.Parent = part
         end
         
-        -- Update collision box size
-        collisionBox.Size = originalProps[part].Size
+        -- Update collision box size (using a smaller size than the visual hitbox)
+        collisionBox.Size = originalProps[part].Size * 1.5 -- Only 1.5x the original size for collision
         collisionBox.CustomPhysicalProperties = originalProps[part].CustomPhysicalProperties
         
         activeHitboxes[part] = true

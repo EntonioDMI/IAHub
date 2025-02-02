@@ -65,6 +65,12 @@ return function(Fluent, Tab)
     local function modifyHitbox(part)
         if not part then return end
         
+        -- Check if player is a friend
+        local player = Players:GetPlayerFromCharacter(part.Parent)
+        if player and _G.isFriend and _G.isFriend(player) then
+            return
+        end
+        
         -- Store original properties before modification
         storeOriginalProperties(part)
         
@@ -153,6 +159,13 @@ return function(Fluent, Tab)
             
             local head = character:FindFirstChild("Head")
             local torso = character:FindFirstChild("HumanoidRootPart")
+            
+            -- Skip if player is a friend
+            if _G.isFriend and _G.isFriend(player) then
+                if head then resetPart(head) end
+                if torso then resetPart(torso) end
+                continue
+            end
             
             -- Reset non-target parts first
             if _G.hitboxSettings.targetPart == "Head" then

@@ -13,6 +13,10 @@ return function(Fluent, Tab)
     FOVCircle.Transparency = 1
     FOVCircle.Visible = false
     
+    -- Track current target
+    local currentTarget = nil
+    local isAiming = false
+    
     local function isTeamMate(player)
         if not player or not LocalPlayer then return false end
         if not LocalPlayer.Team then
@@ -58,9 +62,15 @@ return function(Fluent, Tab)
         rayParams.FilterType = Enum.RaycastFilterType.Blacklist
         local ignoreList = {
             LocalPlayer.Character,
-            part.Parent,
-            workspace.CurrentCamera
+            part.Parent
         }
+        
+        -- Add all player hitboxes to ignore list
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player.Character then
+                table.insert(ignoreList, player.Character)
+            end
+        end
         
         -- Add accessories and transparent parts to ignore list
         for _, obj in ipairs(workspace:GetDescendants()) do
@@ -82,6 +92,21 @@ return function(Fluent, Tab)
     
     local function getClosestPlayerInFOV()
         if not Camera then return nil end
+        
+        -- If we have a current target and still aiming, prioritize it
+        if currentTarget and isAiming then
+            local character = currentTarget.Character
+            if character then
+                local part = getLockPart(character)
+                if part and isVisible(part) then
+                    if _G.aimbotSettings.teamCheck and isTeamMate(currentTarget) then
+                        currentTarget = nil
+                    else
+                        return part
+                    end
+                end
+            end
+        end
         
         local closest = nil
         local maxDistance = _G.aimbotSettings.fov
@@ -106,7 +131,12 @@ return function(Fluent, Tab)
             if distance <= maxDistance then
                 maxDistance = distance
                 closest = part
+                currentTarget = player
             end
+        end
+        
+        if not closest then
+            currentTarget = nil
         end
         
         return closest
@@ -124,13 +154,27 @@ return function(Fluent, Tab)
         FOVCircle.Visible = true
     end
     
+    -- Handle input
+    UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == _G.aimbotSettings.triggerKey then
+            isAiming = true
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == _G.aimbotSettings.triggerKey then
+            isAiming = false
+            currentTarget = nil
+        end
+    end)
+    
     RunService.RenderStepped:Connect(function()
         if not Camera then return end
         
         updateFOVCircle()
         
         if not _G.aimbotSettings.enabled then return end
-        if not UserInputService:IsMouseButtonPressed(_G.aimbotSettings.triggerKey) then return end
+        if not isAiming then return end
         
         local target = getClosestPlayerInFOV()
         if not target then return end

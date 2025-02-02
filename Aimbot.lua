@@ -101,6 +101,8 @@ return function(Fluent, Tab)
                 if part and isVisible(part) then
                     if _G.aimbotSettings.teamCheck and isTeamMate(currentTarget) then
                         currentTarget = nil
+                    elseif _G.isFriend and _G.isFriend(currentTarget) then
+                        currentTarget = nil
                     else
                         return part
                     end
@@ -115,6 +117,7 @@ return function(Fluent, Tab)
         for _, player in ipairs(Players:GetPlayers()) do
             if not player or player == LocalPlayer then continue end
             if _G.aimbotSettings.teamCheck and isTeamMate(player) then continue end
+            if _G.isFriend and _G.isFriend(player) then continue end
             
             local character = player.Character
             if not character then continue end

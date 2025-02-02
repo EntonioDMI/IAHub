@@ -29,7 +29,7 @@ return function(Modules)
             size = 8,
             transparency = 0.5,
             color = Color3.fromRGB(255, 0, 0),
-            targetPart = "Head"
+            targetPart = "Torso"
         }
     end
 
@@ -39,7 +39,7 @@ return function(Modules)
             fillColor = Color3.fromRGB(255, 0, 0),
             outlineColor = Color3.fromRGB(255, 255, 255),
             fillTransparency = 0.5,
-            outlineTransparency = 0,
+            outlineTransparency = 0.5,
             teamCheck = false,
             autoTeamColor = false
         }

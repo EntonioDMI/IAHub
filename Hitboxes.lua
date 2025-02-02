@@ -37,15 +37,8 @@ return function(Fluent, Tab)
         if not part or not originalProps[part] then return end
         
         local props = originalProps[part]
-        part.Size = props.Size
-        part.Transparency = props.Transparency
-        part.Color = props.Color
-        part.Material = props.Material
-        part.CanCollide = props.CanCollide
-        part.CustomPhysicalProperties = props.CustomPhysicalProperties
-        part.CollisionGroupId = props.CollisionGroupId
         
-        -- Reset mesh if it exists
+        -- Reset mesh first if it exists
         if props.Mesh then
             local mesh = part:FindFirstChildOfClass("SpecialMesh") or 
                         part:FindFirstChildOfClass("FileMesh") or
@@ -57,7 +50,16 @@ return function(Fluent, Tab)
             end
         end
 
+        part.Size = props.Size
+        part.Transparency = props.Transparency
+        part.Color = props.Color
+        part.Material = props.Material
+        part.CanCollide = props.CanCollide
+        part.CustomPhysicalProperties = props.CustomPhysicalProperties
+        part.CollisionGroupId = props.CollisionGroupId
+
         activeHitboxes[part] = nil
+        originalProps[part] = nil
     end
 
     local function modifyHitbox(part)
@@ -66,17 +68,24 @@ return function(Fluent, Tab)
         -- Store original properties before modification
         storeOriginalProperties(part)
         
-        -- Handle mesh-based parts
+        -- Handle mesh-based parts differently
         local mesh = part:FindFirstChildOfClass("SpecialMesh") or 
                     part:FindFirstChildOfClass("FileMesh") or
                     part:FindFirstChildOfClass("BlockMesh")
         
         if mesh then
-            -- Scale the mesh instead of the part
-            local scale = Vector3.new(_G.hitboxSettings.size / part.Size.X, 
-                                    _G.hitboxSettings.size / part.Size.Y,
-                                    _G.hitboxSettings.size / part.Size.Z)
-            mesh.Scale = mesh.Scale * scale
+            -- For mesh parts, we'll use a more conservative scaling approach
+            local originalSize = originalProps[part].Size
+            local targetSize = _G.hitboxSettings.size
+            local scaleFactor = targetSize / math.max(originalSize.X, originalSize.Y, originalSize.Z)
+            
+            -- Limit scale factor to prevent infinite scaling
+            scaleFactor = math.min(scaleFactor, 10) -- Maximum 10x scaling for mesh parts
+            
+            mesh.Scale = Vector3.new(scaleFactor, scaleFactor, scaleFactor)
+            
+            -- Don't modify the part's size for mesh parts
+            part.Size = originalSize
         else
             -- For regular parts, modify the size directly
             part.Size = Vector3.new(_G.hitboxSettings.size, _G.hitboxSettings.size, _G.hitboxSettings.size)
@@ -87,10 +96,31 @@ return function(Fluent, Tab)
         part.Color = _G.hitboxSettings.color
         part.Material = Enum.Material.ForceField
         
-        -- Completely disable collision
+        -- New approach to handling collisions
         part.CanCollide = false
         part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
-        part.CollisionGroupId = 32 -- Use a unique collision group to prevent any collisions
+        
+        -- Create or update collision box
+        local collisionBox = part:FindFirstChild("HitboxCollision") or Instance.new("Part")
+        if not part:FindFirstChild("HitboxCollision") then
+            collisionBox.Name = "HitboxCollision"
+            collisionBox.Transparency = 1
+            collisionBox.CanCollide = true
+            collisionBox.Anchored = false
+            collisionBox.Massless = true
+            
+            -- Create weld
+            local weld = Instance.new("WeldConstraint")
+            weld.Part0 = part
+            weld.Part1 = collisionBox
+            weld.Parent = collisionBox
+            
+            collisionBox.Parent = part
+        end
+        
+        -- Update collision box size
+        collisionBox.Size = originalProps[part].Size
+        collisionBox.CustomPhysicalProperties = originalProps[part].CustomPhysicalProperties
         
         activeHitboxes[part] = true
     end
@@ -98,6 +128,11 @@ return function(Fluent, Tab)
     local function resetAllHitboxes()
         for part, _ in pairs(activeHitboxes) do
             if part and part.Parent then
+                -- Remove collision box if it exists
+                local collisionBox = part:FindFirstChild("HitboxCollision")
+                if collisionBox then
+                    collisionBox:Destroy()
+                end
                 resetPart(part)
             end
         end
@@ -130,8 +165,8 @@ return function(Fluent, Tab)
         end
     end
 
-    -- Clean up when the script is disabled
-    game:GetService("Players").PlayerRemoving:Connect(function(player)
+    -- Clean up when players leave
+    Players.PlayerRemoving:Connect(function(player)
         if player.Character then
             for _, part in ipairs(player.Character:GetDescendants()) do
                 if activeHitboxes[part] then

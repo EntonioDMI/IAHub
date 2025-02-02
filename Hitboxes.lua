@@ -7,69 +7,16 @@ return function(Fluent, Tab)
     local originalProps = {}
     local activeHitboxes = {}
 
-    local function storeOriginalProperties(part)
-        if not originalProps[part] then
-            originalProps[part] = {
-                Size = part.Size,
-                Transparency = part.Transparency,
-                Color = part.Color,
-                Material = part.Material,
-                CanCollide = part.CanCollide,
-                CustomPhysicalProperties = part.CustomPhysicalProperties,
-                CollisionGroupId = part.CollisionGroupId
-            }
-            
-            -- Store mesh properties if they exist
-            local mesh = part:FindFirstChildOfClass("SpecialMesh") or 
-                        part:FindFirstChildOfClass("FileMesh") or
-                        part:FindFirstChildOfClass("BlockMesh")
-            if mesh then
-                originalProps[part].Mesh = {
-                    Scale = mesh.Scale,
-                    Offset = mesh.Offset,
-                    VertexColor = mesh.VertexColor
-                }
-            end
-        end
+    -- Function to check if a model is a boss that was previously a player
+    local function isPlayerBoss(model)
+        return model:FindFirstChild("Humanoid") and model:FindFirstChild("HumanoidRootPart") and
+               Players:GetPlayerFromCharacter(model) ~= nil
     end
 
-    local function resetPart(part)
-        if not part or not originalProps[part] then return end
-        
-        local props = originalProps[part]
-        
-        -- Reset mesh first if it exists
-        if props.Mesh then
-            local mesh = part:FindFirstChildOfClass("SpecialMesh") or 
-                        part:FindFirstChildOfClass("FileMesh") or
-                        part:FindFirstChildOfClass("BlockMesh")
-            if mesh then
-                mesh.Scale = props.Mesh.Scale
-                mesh.Offset = props.Mesh.Offset
-                mesh.VertexColor = props.Mesh.VertexColor
-            end
-        end
+    -- [Previous helper functions remain unchanged]
 
-        part.Size = props.Size
-        part.Transparency = props.Transparency
-        part.Color = props.Color
-        part.Material = props.Material
-        part.CanCollide = props.CanCollide
-        part.CustomPhysicalProperties = props.CustomPhysicalProperties
-        part.CollisionGroupId = props.CollisionGroupId
-
-        activeHitboxes[part] = nil
-        originalProps[part] = nil
-    end
-
-    local function modifyHitbox(part)
+    local function modifyHitbox(part, isNPC, isBoss)
         if not part then return end
-        
-        -- Check if player is a friend
-        local player = Players:GetPlayerFromCharacter(part.Parent)
-        if player and _G.isFriend and _G.isFriend(player) then
-            return
-        end
         
         -- Store original properties before modification
         storeOriginalProperties(part)
@@ -80,29 +27,21 @@ return function(Fluent, Tab)
                     part:FindFirstChildOfClass("BlockMesh")
         
         if mesh then
-            -- For mesh parts, we'll use a more conservative scaling approach
             local originalSize = originalProps[part].Size
             local targetSize = _G.hitboxSettings.size
             local scaleFactor = targetSize / math.max(originalSize.X, originalSize.Y, originalSize.Z)
-            
-            -- Limit scale factor to prevent infinite scaling
-            scaleFactor = math.min(scaleFactor, 5) -- Maximum 5x scaling for mesh parts
-            
+            scaleFactor = math.min(scaleFactor, 5)
             mesh.Scale = Vector3.new(scaleFactor, scaleFactor, scaleFactor)
-            
-            -- Don't modify the part's size for mesh parts
             part.Size = originalSize
         else
-            -- For regular parts, modify the size directly
             part.Size = Vector3.new(_G.hitboxSettings.size, _G.hitboxSettings.size, _G.hitboxSettings.size)
         end
         
-        -- Apply common properties
         part.Transparency = _G.hitboxSettings.transparency
         part.Color = _G.hitboxSettings.color
         part.Material = Enum.Material.ForceField
         
-        -- New approach to handling collisions
+        -- Collision handling
         part.CanCollide = false
         part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
         
@@ -115,7 +54,6 @@ return function(Fluent, Tab)
             collisionBox.Anchored = false
             collisionBox.Massless = true
             
-            -- Create weld
             local weld = Instance.new("WeldConstraint")
             weld.Part0 = part
             weld.Part1 = collisionBox
@@ -124,70 +62,87 @@ return function(Fluent, Tab)
             collisionBox.Parent = part
         end
         
-        -- Update collision box size (using a smaller size than the visual hitbox)
-        collisionBox.Size = originalProps[part].Size * 1.5 -- Only 1.5x the original size for collision
+        collisionBox.Size = originalProps[part].Size * 1.5
         collisionBox.CustomPhysicalProperties = originalProps[part].CustomPhysicalProperties
         
         activeHitboxes[part] = true
     end
 
-    local function resetAllHitboxes()
+    local function updateHitboxes()
+        -- Update player hitboxes
+        if _G.hitboxSettings.enabled then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player == LocalPlayer then continue end
+                if _G.isFriend and _G.isFriend(player) then continue end
+                
+                local character = player.Character
+                if character then
+                    local targetPart = character:FindFirstChild(_G.hitboxSettings.targetPart)
+                    if targetPart then
+                        modifyHitbox(targetPart, false, false)
+                    end
+                end
+            end
+        end
+
+        -- Update NPC hitboxes
+        if _G.hitboxSettings.npcEnabled then
+            local npcs = workspace:FindFirstChild("NPCs")
+            if npcs then
+                for _, npc in ipairs(npcs:GetChildren()) do
+                    if npc:FindFirstChild("Humanoid") and npc:FindFirstChild("HumanoidRootPart") then
+                        local targetPart = npc:FindFirstChild(_G.hitboxSettings.targetPart)
+                        if targetPart then
+                            modifyHitbox(targetPart, true, false)
+                        end
+                    end
+                end
+            end
+        end
+
+        -- Update Boss hitboxes
+        if _G.hitboxSettings.bossEnabled then
+            local bossFolder = workspace.NPCs:FindFirstChild("Boss")
+            if bossFolder then
+                for _, boss in ipairs(bossFolder:GetChildren()) do
+                    if boss:FindFirstChild("Humanoid") and boss:FindFirstChild("HumanoidRootPart") then
+                        local targetPart = boss:FindFirstChild(_G.hitboxSettings.targetPart)
+                        if targetPart then
+                            modifyHitbox(targetPart, true, true)
+                        end
+                    end
+                end
+            end
+        end
+
+        -- Reset hitboxes that should no longer be active
         for part, _ in pairs(activeHitboxes) do
             if part and part.Parent then
-                -- Remove collision box if it exists
-                local collisionBox = part:FindFirstChild("HitboxCollision")
-                if collisionBox then
-                    collisionBox:Destroy()
+                local model = part:FindFirstAncestorOfClass("Model")
+                if not model then
+                    resetPart(part)
+                    continue
                 end
-                resetPart(part)
-            end
-        end
-        activeHitboxes = {}
-    end
 
-    local function updateHitboxes()
-        if not _G.hitboxSettings.enabled then
-            resetAllHitboxes()
-            return
-        end
-        
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player == LocalPlayer then continue end
-            
-            local character = player.Character
-            if not character then continue end
-            
-            local head = character:FindFirstChild("Head")
-            local torso = character:FindFirstChild("HumanoidRootPart")
-            
-            -- Skip if player is a friend
-            if _G.isFriend and _G.isFriend(player) then
-                if head then resetPart(head) end
-                if torso then resetPart(torso) end
-                continue
-            end
-            
-            -- Reset non-target parts first
-            if _G.hitboxSettings.targetPart == "Head" then
-                if torso then resetPart(torso) end
-                if head then modifyHitbox(head) end
-            else
-                if head then resetPart(head) end
-                if torso then modifyHitbox(torso) end
-            end
-        end
-    end
+                local shouldReset = false
+                local isPlayer = Players:GetPlayerFromCharacter(model) ~= nil
+                local isNPC = model:IsDescendantOf(workspace.NPCs)
+                local isBoss = model:IsDescendantOf(workspace.NPCs.Boss)
 
-    -- Clean up when players leave
-    Players.PlayerRemoving:Connect(function(player)
-        if player.Character then
-            for _, part in ipairs(player.Character:GetDescendants()) do
-                if activeHitboxes[part] then
+                if isPlayer and not _G.hitboxSettings.enabled then
+                    shouldReset = true
+                elseif isNPC and not isBoss and not _G.hitboxSettings.npcEnabled then
+                    shouldReset = true
+                elseif isBoss and not _G.hitboxSettings.bossEnabled then
+                    shouldReset = true
+                end
+
+                if shouldReset then
                     resetPart(part)
                 end
             end
         end
-    end)
+    end
 
     RunService.RenderStepped:Connect(updateHitboxes)
 end

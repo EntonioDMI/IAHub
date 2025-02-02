@@ -10,6 +10,7 @@ return function(Fluent, Tab)
     local defaultColor = Color3.fromRGB(150, 150, 150)
     local cleanupQueue = {}
     local friendColor = Color3.fromRGB(0, 255, 0)
+    local friendAnimations = {}
     
     -- Functions
     local function getTeamColor(player)
@@ -26,20 +27,52 @@ return function(Fluent, Tab)
         return player.Team == LocalPlayer.Team
     end
     
+    local function stopFriendAnimation(player)
+        if friendAnimations[player] then
+            friendAnimations[player]:Cancel()
+            friendAnimations[player] = nil
+        end
+    end
+    
     local function updateHighlightColors(highlight, player)
         if not highlight or not highlight.Parent then return end
         
+        stopFriendAnimation(player)
+        
         if _G.isFriend and _G.isFriend(player) then
-            -- Pulsing green effect for friends
-            local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
-            local tween = TweenService:Create(highlight, tweenInfo, {
-                FillColor = friendColor,
-                FillTransparency = math.max(0.3, _G.highlightSettings.fillTransparency)
-            })
-            tween:Play()
+            -- Set base colors for friend
+            highlight.FillColor = friendColor
             highlight.OutlineColor = friendColor
-            highlight.OutlineTransparency = _G.highlightSettings.outlineTransparency
+            
+            -- Keep friend highlight visible even when ESP is off
+            if not _G.highlightSettings.enabled then
+                highlight.FillTransparency = 1
+                highlight.OutlineTransparency = 0
+                return
+            end
+            
+            -- Create pulsing animation for friends when ESP is on
+            local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+            local minFillTransparency = _G.highlightSettings.fillTransparency
+            local minOutlineTransparency = _G.highlightSettings.outlineTransparency
+            
+            highlight.FillTransparency = minFillTransparency
+            highlight.OutlineTransparency = minOutlineTransparency
+            
+            local tween = TweenService:Create(highlight, tweenInfo, {
+                FillTransparency = math.min(0.8, minFillTransparency + 0.3),
+                OutlineTransparency = math.min(0.8, minOutlineTransparency + 0.3)
+            })
+            
+            friendAnimations[player] = tween
+            tween:Play()
         else
+            if not _G.highlightSettings.enabled then
+                highlight.FillTransparency = 1
+                highlight.OutlineTransparency = 1
+                return
+            end
+            
             if _G.highlightSettings.autoTeamColor then
                 highlight.FillColor = getTeamColor(player)
             else
@@ -58,6 +91,7 @@ return function(Fluent, Tab)
     end
     
     local function removeHighlight(player)
+        stopFriendAnimation(player)
         if highlights[player] then
             cleanupHighlight(highlights[player])
             highlights[player] = nil
@@ -152,15 +186,9 @@ return function(Fluent, Tab)
     
     -- Make updateHighlights function global so it can be called from UI callbacks
     _G.updateHighlights = function()
-        if _G.highlightSettings.enabled then
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer then
-                    createHighlight(player)
-                end
-            end
-        else
-            for player, highlight in pairs(highlights) do
-                removeHighlight(player)
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                createHighlight(player)
             end
         end
         
@@ -169,9 +197,7 @@ return function(Fluent, Tab)
     
     -- Connections for player events
     Players.PlayerAdded:Connect(function(player)
-        if _G.highlightSettings.enabled then
-            createHighlight(player)
-        end
+        createHighlight(player)
     end)
     
     Players.PlayerRemoving:Connect(function(player)
@@ -184,11 +210,9 @@ return function(Fluent, Tab)
     -- Process cleanup queue and update highlights
     RunService.RenderStepped:Connect(function()
         processCleanupQueue()
-        if _G.highlightSettings.enabled then
-            for _, player in pairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer and highlights[player] then
-                    updateHighlightColors(highlights[player], player)
-                end
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and highlights[player] then
+                updateHighlightColors(highlights[player], player)
             end
         end
     end)

@@ -34,11 +34,11 @@ return function(Fluent, Tab)
             local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
             local tween = TweenService:Create(highlight, tweenInfo, {
                 FillColor = friendColor,
-                FillTransparency = 0.3
+                FillTransparency = math.max(0.3, _G.highlightSettings.fillTransparency)
             })
             tween:Play()
             highlight.OutlineColor = friendColor
-            highlight.OutlineTransparency = 0
+            highlight.OutlineTransparency = _G.highlightSettings.outlineTransparency
         else
             if _G.highlightSettings.autoTeamColor then
                 highlight.FillColor = getTeamColor(player)
@@ -185,7 +185,11 @@ return function(Fluent, Tab)
     RunService.RenderStepped:Connect(function()
         processCleanupQueue()
         if _G.highlightSettings.enabled then
-            _G.updateHighlights()
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and highlights[player] then
+                    updateHighlightColors(highlights[player], player)
+                end
+            end
         end
     end)
     
